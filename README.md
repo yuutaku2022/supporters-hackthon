@@ -24,8 +24,9 @@ Supabase JavaScript Client の現在の依存バージョンは Node.js 22 以�
    npm ci
    ```
 
-3. 環境変数ファイルを作成します。Windows PowerShell の場合：
-   miroに.env.localファイルがあるのでそれをダウンロードして、このプロジェクトのディレクトリ直下においてほしい。
+3. 環境変数ファイルを作成します。miroに.env.localファイルがあるのでそれをダウンロードして、このプロジェクトのディレクトリ直下においてほしい。
+  
+   Windows PowerShell の場合：
    
    ```powershell
    Copy-Item .env.example .env.local
@@ -37,11 +38,11 @@ Supabase JavaScript Client の現在の依存バージョンは Node.js 22 以�
    cp .env.example .env.local
    ```
 
-5. Supabase の Project URL と公開用キーを `.env.local` に設定します。キーは Supabase Dashboard のプロジェクト設定から取得してください。`SUPABASE_SERVICE_ROLE_KEY` はサーバー専用の秘密鍵です。必要になった場合だけローカルの `.env.local` に設定し、ブラウザー向けコードから絶対に参照しないでください。
+6. Supabase の Project URL と公開用キーを `.env.local` に設定します。キーは Supabase Dashboard のプロジェクト設定から取得してください。`SUPABASE_SERVICE_ROLE_KEY` はサーバー専用の秘密鍵です。必要になった場合だけローカルの `.env.local` に設定し、ブラウザー向けコードから絶対に参照しないでください。
 
    Supabase の分離された開発用・本番用プロジェクトを使うことを推奨します。開発環境と本番環境で同じプロジェクトを使うと、ローカルでの操作が本番データに影響する可能性があります。
 
-6. 開発サーバーを起動します。
+7. 開発サーバーを起動します。
 
    ```bash
    npm run dev
