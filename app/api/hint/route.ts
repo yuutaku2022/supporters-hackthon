@@ -11,8 +11,12 @@ export async function POST(request: Request) {
   if (!isStringArray(body?.timeline) || !isStringArray(body?.pressed)) {
     return Response.json({ error: 'timeline / pressed が不正です' } satisfies ApiErrorBody, { status: 400 });
   }
-  const timeline = await findPostsByIds(body.timeline);
-  return Response.json({ postId: hint(timeline, body.pressed) } satisfies HintResponse);
+  try {
+    const timeline = await findPostsByIds(body.timeline);
+    return Response.json({ postId: hint(timeline, body.pressed) } satisfies HintResponse);
+  } catch (e) {
+    return Response.json({ error: e instanceof Error ? e.message : 'ヒントを取得できませんでした' } satisfies ApiErrorBody, { status: 500 });
+  }
 }
 
 const isStringArray = (v: unknown): v is string[] => Array.isArray(v) && v.every((x) => typeof x === 'string');

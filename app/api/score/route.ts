@@ -11,9 +11,13 @@ export async function POST(request: Request) {
   if (!isStringArray(body?.pressed)) {
     return Response.json({ error: 'pressed が不正です' } satisfies ApiErrorBody, { status: 400 });
   }
-  // 存在しない id と重複は数えない
-  const pressed = await findPostsByIds([...new Set(body.pressed)]);
-  return Response.json(score(pressed) satisfies ScoreResponse);
+  try {
+    // 存在しない id と重複は数えない
+    const pressed = await findPostsByIds([...new Set(body.pressed)]);
+    return Response.json(score(pressed) satisfies ScoreResponse);
+  } catch (e) {
+    return Response.json({ error: e instanceof Error ? e.message : '採点できませんでした' } satisfies ApiErrorBody, { status: 500 });
+  }
 }
 
 const isStringArray = (v: unknown): v is string[] => Array.isArray(v) && v.every((x) => typeof x === 'string');

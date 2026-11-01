@@ -19,6 +19,13 @@ export async function GET(request: NextRequest) {
     if (forced >= 400) return Response.json({ error: 'forced error' } satisfies ApiErrorBody, { status: forced });
   }
 
-  const posts = await findRandomPosts(TIMELINE_SIZE);
-  return Response.json({ posts: posts.map(toPublicPost) } satisfies TimelineResponse);
+  try {
+    const posts = await findRandomPosts(TIMELINE_SIZE);
+    return Response.json({ posts: posts.map(toPublicPost) } satisfies TimelineResponse);
+  } catch (e) {
+    return serverError(e);
+  }
 }
+
+const serverError = (e: unknown) =>
+  Response.json({ error: e instanceof Error ? e.message : 'ポストを取得できませんでした' } satisfies ApiErrorBody, { status: 500 });

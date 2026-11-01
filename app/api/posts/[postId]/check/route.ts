@@ -7,7 +7,11 @@ import type { ApiErrorBody, CheckResponse } from '@/types/game';
  */
 export async function POST(_request: Request, ctx: RouteContext<'/api/posts/[postId]/check'>) {
   const { postId } = await ctx.params;
-  const [post] = await findPostsByIds([postId]);
-  if (!post) return Response.json({ error: 'post not found' } satisfies ApiErrorBody, { status: 404 });
-  return Response.json({ cold: Boolean(post.cold) } satisfies CheckResponse);
+  try {
+    const [post] = await findPostsByIds([postId]);
+    if (!post) return Response.json({ error: 'post not found' } satisfies ApiErrorBody, { status: 404 });
+    return Response.json({ cold: Boolean(post.cold) } satisfies CheckResponse);
+  } catch (e) {
+    return Response.json({ error: e instanceof Error ? e.message : '判定できませんでした' } satisfies ApiErrorBody, { status: 500 });
+  }
 }
