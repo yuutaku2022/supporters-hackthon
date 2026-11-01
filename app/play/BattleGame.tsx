@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { START_HINTS } from '@/features/game/rules';
 import type { PublicPost } from '@/types/game';
 import { ApiError, fetchTimeline, postCheck, postHint, postScore } from './api';
@@ -38,13 +38,21 @@ export function BattleGame() {
     return () => ctrl.abort();
   }, [attempt]);
 
-  const reload = () => {
+  /** ゲームを捨てて、新しいタイムラインで最初から */
+  const reset = () => {
     setPosts(null);
     setLoadError(null);
+    setHints(START_HINTS);
+    setSending(false);
+    setFinishError(null);
     setAttempt((a) => a + 1);
   };
 
-  if (!posts) return <BattleLoading error={loadError} onRetry={reload} />;
+  // Next.js（Cache Components）は画面を移動しても /play を隠して残し、戻るとそのまま再表示する。
+  // ゲームは続きから再開させたくないので、隠れるとき（＝ページを離れるとき）にリセットする。
+  useLayoutEffect(() => reset, []);
+
+  if (!posts) return <BattleLoading error={loadError} onRetry={reset} />;
 
   const onCheck = async (postId: string) => (await postCheck(postId)).cold;
 
