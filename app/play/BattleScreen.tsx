@@ -2,92 +2,79 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import type { CheckResponse, PublicPost, PublicQuestion } from '@/types/game';
-import { TIME_LIMIT } from '@/features/game/rules';
+import type { PublicPost } from '@/types/game';
+import { scoreOf, TIME_LIMIT } from '@/features/game/rules';
 import { PILL, PILL_DANGER, PILL_PRIMARY } from './styles';
 import { XPhone } from './XPhone';
 
 type Props = {
-  question: PublicQuestion;
-  qIndex: number;
-  total: number;
-  score: number;
-  combo: number;
+  /** タイムラインに並べるポスト */
+  posts: PublicPost[];
   hints: number;
-  /** 「冷笑」を押したポスト1件をサーバーで判定する */
-  onCheck: (index: number, found: number[]) => Promise<CheckResponse>;
-  /** 問題を終える（全部見つけた or 時間切れ）。まとめて採点はサーバー。採点中は sending=true */
-  onFinish: (selected: number[], timeLeft: number) => void;
+  /** 「冷笑」を押したポスト1件をサーバーで判定する（冷笑なら true） */
+  onCheck: (postId: string) => Promise<boolean>;
+  /** 時間切れ。押したポストから採点（サーバー）。採点中は sending=true */
+  onFinish: (pressed: string[]) => void;
   sending: boolean;
   /** 採点 API が失敗したときのメッセージ（「もう一度」で再送できる） */
   error: string | null;
-  /** ヒントを使う。サーバーから教えてもらった冷笑ポストの番号を返す */
-  onHint: (selected: number[]) => Promise<number | null>;
+  /** ヒントを使う。サーバーから教えてもらった冷笑ポストの id を返す */
+  onHint: (pressed: string[]) => Promise<string | null>;
 };
 
 type Mark = 'hit' | 'miss';
 
-/** 全部見つけてから判定画面に移るまでの間（「撃破！」を見せる） */
-const FINISH_DELAY_MS = 700;
-
 /**
  * バトル画面（X のタイムライン風）
- * ポストが数件並ぶ。冷笑していると思うポストのアクションバー右端の「冷笑」を押すと、その場で当たり／ハズレが出る。
- * 冷笑ポストを全部見つけるか時間切れで、この問題は終わり。
- * 問題が変わるたびに key を変えて作り直す前提（状態・タイマーをリセットするため）。
+ * 1本の長いタイムラインをスクロールしながら、冷笑していると思うポストの「冷笑」を押す。その場で当たり／ハズレが出る。
+ * 制限時間内にできるだけ多く見つける。時間切れで終わり。
+ * ゲームをやり直すときは key を変えて作り直す前提（状態・タイマーをリセットするため）。
  */
-export function BattleScreen({ question: q, qIndex, total, score, combo, hints, onCheck, onFinish, sending, error, onHint }: Props) {
-  const [marks, setMarks] = useState<Record<number, Mark>>({});
-  const [checking, setChecking] = useState<number | null>(null);
+export function BattleScreen({ posts, hints, onCheck, onFinish, sending, error, onHint }: Props) {
+  const [marks, setMarks] = useState<Record<string, Mark>>({});
+  const [checking, setChecking] = useState<string | null>(null);
   const [checkError, setCheckError] = useState<string | null>(null);
-  const [cleared, setCleared] = useState(false);
   const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
-  const [hinted, setHinted] = useState<number | null>(null);
+  const [hinted, setHinted] = useState<string | null>(null);
   const [hintBusy, setHintBusy] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const done = useRef(false);
 
-  const pressed = Object.keys(marks).map(Number);
-  const hitCount = pressed.filter((i) => marks[i] === 'hit').length;
+  const pressed = Object.keys(marks);
+  const hitCount = pressed.filter((id) => marks[id] === 'hit').length;
   const missCount = pressed.length - hitCount;
-  const busy = sending || cleared || timeLeft === 0;
+  const timeUp = timeLeft === 0;
+  const busy = sending || timeUp;
 
-  const finish = (sel: number[], t: number) => {
+  const finish = () => {
     if (done.current) return;
     done.current = true;
-    onFinish(sel, t);
+    onFinish(pressed);
   };
   const retryFinish = () => {
     done.current = false;
-    finish(pressed, timeLeft);
+    finish();
   };
 
-  // タイマー。全部見つけた後・採点待ち・メニューを開いている間は止める
+  // タイマー。採点待ち・メニューを開いている間は止める
   useEffect(() => {
-    if (sending || cleared || menuOpen) return;
+    if (sending || menuOpen) return;
     const id = window.setInterval(() => setTimeLeft((t) => Math.max(0, t - 1)), 1000);
     return () => window.clearInterval(id);
-  }, [sending, cleared, menuOpen]);
+  }, [sending, menuOpen]);
   // 0秒になったら、それまでに押したポストで採点
   useEffect(() => {
-    if (timeLeft === 0) finish(pressed, 0);
+    if (timeUp) finish();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeLeft]);
+  }, [timeUp]);
 
-  const press = async (i: number) => {
-    if (marks[i] || checking !== null || busy) return;
-    setChecking(i);
+  const press = async (postId: string) => {
+    if (marks[postId] || checking !== null || busy) return;
+    setChecking(postId);
     setCheckError(null);
     try {
-      const found = pressed.filter((x) => marks[x] === 'hit');
-      const r = await onCheck(i, found);
-      const next = { ...marks, [i]: r.cold ? 'hit' : 'miss' } as Record<number, Mark>;
-      setMarks(next);
-      if (r.cold && r.remaining === 0) {
-        setCleared(true);
-        const t = timeLeft;
-        window.setTimeout(() => finish(Object.keys(next).map(Number), t), FINISH_DELAY_MS);
-      }
+      const cold = await onCheck(postId);
+      setMarks((m) => ({ ...m, [postId]: cold ? 'hit' : 'miss' }));
     } catch {
       setCheckError('判定できませんでした。もう一度押してください');
     } finally {
@@ -96,10 +83,13 @@ export function BattleScreen({ question: q, qIndex, total, score, combo, hints, 
   };
 
   const hint = async () => {
-    if (hints <= 0 || hinted !== null || hintBusy) return;
+    if (hints <= 0 || hintBusy || busy) return;
     setHintBusy(true);
     try {
-      setHinted(await onHint(pressed));
+      const postId = await onHint(pressed);
+      setHinted(postId);
+      // あやしいポストまでスクロール
+      if (postId) document.getElementById(postDomId(postId))?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     } catch {
       /* ヒントが取れなくてもバトルは続ける */
     } finally {
@@ -111,13 +101,11 @@ export function BattleScreen({ question: q, qIndex, total, score, combo, hints, 
 
   return (
     <XPhone>
-      {/* ヘッダー：画面名・バトル数・スコア／残り時間 */}
+      {/* ヘッダー：画面名・スコア／残り時間 */}
       <header className="relative flex items-center gap-4 border-b border-x-line bg-black/85 px-4 pt-2.5 pb-3 backdrop-blur-md">
         <div className="flex min-w-0 grow flex-col">
           <strong className="text-xl font-extrabold">ホーム</strong>
-          <span className="truncate text-[13px] text-x-sub">
-            {qIndex + 1}/{total} ・ {score.toLocaleString()}pt
-          </span>
+          <span className="truncate text-[13px] text-x-sub">{scoreOf(hitCount, missCount).toLocaleString()}pt</span>
         </div>
         <span
           className={`min-w-9 rounded-full border px-2 py-0.5 text-center font-extrabold tabular-nums ${
@@ -136,61 +124,52 @@ export function BattleScreen({ question: q, qIndex, total, score, combo, hints, 
       </header>
 
       <div className="grow overflow-y-auto">
-        <p className="flex items-center justify-center gap-2 border-b border-x-line px-4 py-2.5 text-center text-sm text-x-sub">
-          <span>
-            <strong className="text-x-pink">冷笑しているポスト</strong>を全部見つけよう
-          </span>
-          {combo >= 2 && (
-            <span className="animate-rise rounded-full bg-x-blue px-2 py-px text-xs font-extrabold whitespace-nowrap text-white motion-reduce:animate-none">
-              COMBO ×{combo}
-            </span>
-          )}
+        <p className="border-b border-x-line px-4 py-2.5 text-center text-sm text-x-sub">
+          時間内に<strong className="text-x-pink">冷笑しているポスト</strong>をできるだけ見つけよう
         </p>
 
-        {q.posts.map((post, i) => (
+        {posts.map((post, i) => (
           <Post
-            key={i}
+            key={post.id}
+            domId={postDomId(post.id)}
             post={post}
-            seed={`${q.id}-${i}`}
-            minutesAgo={(i + 1) * 7}
-            mark={marks[i]}
-            checking={checking === i}
-            hinted={hinted === i && !marks[i]}
+            seed={post.id}
+            minutesAgo={(i + 1) * 3}
+            mark={marks[post.id]}
+            checking={checking === post.id}
+            hinted={hinted === post.id && !marks[post.id]}
             disabled={busy || checking !== null}
-            onPress={() => press(i)}
+            onPress={() => press(post.id)}
           />
         ))}
 
-        {cleared && (
-          <p className="animate-rise px-4 py-4 text-center text-lg font-extrabold text-x-pink motion-reduce:animate-none">
-            冷笑モンスターを全部見つけた！
-          </p>
-        )}
-        {(checkError || error) && (
-          <div className="mx-4 my-3 rounded-lg border border-x-danger px-3 py-2 text-sm text-x-danger" role="alert">
-            <p>{error ? `採点できませんでした（${error}）` : checkError}</p>
-            {error && (
+        <p className="px-4 py-6 text-center text-sm text-x-sub">タイムラインはここまで</p>
+      </div>
+
+      {(timeUp || checkError || error) && (
+        <div className="border-t border-x-line px-4 py-2.5 text-center text-sm" role="status">
+          {error ? (
+            <div className="text-x-danger" role="alert">
+              <p>採点できませんでした（{error}）</p>
               <button type="button" className={`${PILL_PRIMARY} mt-2`} onClick={retryFinish} disabled={sending}>
                 もう一度
               </button>
-            )}
-          </div>
-        )}
-      </div>
+            </div>
+          ) : timeUp ? (
+            <p className="font-extrabold text-x-pink">時間切れ！ 結果を集計中…</p>
+          ) : (
+            <p className="text-x-danger" role="alert">{checkError}</p>
+          )}
+        </div>
+      )}
 
       {/* 下部：操作バー */}
       <footer className="flex items-center gap-3 border-t border-x-line bg-x-bg px-4 pt-2.5 pb-[calc(10px+env(safe-area-inset-bottom))]">
-        <button type="button" className={PILL} onClick={hint} disabled={hints <= 0 || hinted !== null || hintBusy || busy}>
+        <button type="button" className={PILL} onClick={hint} disabled={hints <= 0 || hintBusy || busy}>
           ヒント ×{hints}
         </button>
         <span className="ml-auto text-sm text-x-sub tabular-nums" aria-live="polite">
-          {sending ? (
-            '採点中…'
-          ) : (
-            <>
-              <span className="text-x-pink">命中 {hitCount}</span> ・ ハズレ {missCount}
-            </>
-          )}
+          <span className="text-x-pink">命中 {hitCount}</span> ・ ハズレ {missCount}
         </span>
         <button
           type="button"
@@ -210,7 +189,11 @@ export function BattleScreen({ question: q, qIndex, total, score, combo, hints, 
   );
 }
 
+const postDomId = (postId: string) => `post-${postId}`;
+
 type PostProps = {
+  /** ヒントでスクロールするときの目印 */
+  domId: string;
   post: PublicPost;
   seed: string;
   minutesAgo: number;
@@ -222,11 +205,12 @@ type PostProps = {
 };
 
 /** タイムラインのポスト1件。アクションバーの右端が「冷笑」ボタン（押すとその場で判定、取り消しはできない） */
-function Post({ post, seed, minutesAgo, mark, checking, hinted, disabled, onPress }: PostProps) {
+function Post({ domId, post, seed, minutesAgo, mark, checking, hinted, disabled, onPress }: PostProps) {
   const name = displayName(post.speaker);
   const stats = fakeStats(seed);
   return (
     <article
+      id={domId}
       className={`flex gap-2.5 border-b border-x-line px-4 py-3 transition-colors ${
         mark === 'hit' ? 'bg-x-pink/10 shadow-[inset_3px_0_0_var(--color-x-pink)]' : mark === 'miss' ? 'opacity-50' : ''
       } ${hinted ?'animate-x-hint shadow-[inset_3px_0_0_var(--color-x-blue)] motion-reduce:animate-none motion-reduce:bg-x-blue/35' : ''}`}

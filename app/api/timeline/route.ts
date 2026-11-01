@@ -1,12 +1,12 @@
 import type { NextRequest } from 'next/server';
-import { QUESTIONS_PER_GAME } from '@/features/game/rules';
-import { findRandomQuestions } from '@/server/repositories/questions';
-import { toPublicQuestion } from '@/server/services/judge';
-import type { ApiErrorBody, QuestionsResponse } from '@/types/game';
+import { TIMELINE_SIZE } from '@/features/game/rules';
+import { findRandomPosts } from '@/server/repositories/posts';
+import { toPublicPost } from '@/server/services/scoring';
+import type { ApiErrorBody, TimelineResponse } from '@/types/game';
 
 /**
- * GET /api/questions → { questions: PublicQuestion[] }（1ゲーム分をランダムに）
- * どのポストが冷笑か・モンスター・解説は返さない。
+ * GET /api/timeline → { posts: PublicPost[] }（1ゲーム分のタイムラインをランダムに）
+ * どのポストが冷笑かは返さない。
  *
  * 開発中だけ ?delay=ミリ秒 で遅延、?status=500 などでエラーを再現できる（読み込み・エラー表示の確認用）。
  */
@@ -19,6 +19,6 @@ export async function GET(request: NextRequest) {
     if (forced >= 400) return Response.json({ error: 'forced error' } satisfies ApiErrorBody, { status: forced });
   }
 
-  const questions = await findRandomQuestions(QUESTIONS_PER_GAME);
-  return Response.json({ questions: questions.map(toPublicQuestion) } satisfies QuestionsResponse);
+  const posts = await findRandomPosts(TIMELINE_SIZE);
+  return Response.json({ posts: posts.map(toPublicPost) } satisfies TimelineResponse);
 }
