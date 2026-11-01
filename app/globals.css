@@ -24,3 +24,56 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ===== 冷笑ハンター（features/game）のトークン =====
+ * ゲーム版のポップ配色：bg-game-ink, bg-game-pink など
+ * X 風バトル画面：bg-x-bg, text-x-sub, border-x-line など
+ */
+@theme {
+  --color-game-ink: #170e33;
+  --color-game-night: #2a1b5c;
+  --color-game-night-2: #3b2a78;
+  --color-game-lilac: #c8bdf0;
+  --color-game-yellow: #ffd23f;
+  --color-game-pink: #ff4f8b;
+  --color-game-sky: #46d2ff;
+  --color-game-green: #7ed957;
+  --color-game-blue-miss: #2e7fd1;
+
+  --color-x-bg: #000000;
+  --color-x-text: #e7e9ea;
+  --color-x-sub: #71767b;
+  --color-x-line: #2f3336;
+  --color-x-blue: #1d9bf0;
+  --color-x-pink: #f91880;
+  --color-x-danger: #f4212e;
+
+  --animate-shake: shake 0.35s ease-in-out;
+  --animate-pop: pop 0.45s ease-out both;
+  --animate-rise: rise 0.3s ease-out both;
+  --animate-x-hint: x-hint 1s ease-in-out infinite;
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-8px) rotate(-3deg); }
+    60% { transform: translateX(8px) rotate(3deg); }
+  }
+  @keyframes pop {
+    0% { transform: scale(0.3) rotate(-5deg); opacity: 0; }
+    70% { transform: scale(1.15) rotate(-5deg); opacity: 1; }
+    100% { transform: scale(1) rotate(-5deg); }
+  }
+  @keyframes rise {
+    from { transform: translateY(16px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  @keyframes x-hint {
+    0%, 100% { background: transparent; }
+    50% { background: rgba(29, 155, 240, 0.35); }
+  }
+}
+
+@theme inline {
+  --font-game-display: var(--font-dela-gothic), sans-serif;
+  --font-game-body: var(--font-mplus-rounded), system-ui, sans-serif;
+}
