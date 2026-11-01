@@ -3,14 +3,13 @@ import { PILL, PILL_PRIMARY } from './styles';
 import { XPhone } from './XPhone';
 
 type Props = {
-  stageName: string;
   error: string | null;
   /** エラー時の「再試行」。サーバーコンポーネントから使うとき（エラーなし）は省略 */
   onRetry?: () => void;
 };
 
 /** API から問題を取ってくる間の画面（バトル画面と同じ X 風） */
-export function BattleLoading({ stageName, error, onRetry }: Props) {
+export function BattleLoading({ error, onRetry }: Props) {
   return (
     <XPhone>
       <header className="flex items-center gap-4 border-b border-x-line bg-black/85 px-4 pt-2.5 pb-3 backdrop-blur-md">
@@ -24,7 +23,7 @@ export function BattleLoading({ stageName, error, onRetry }: Props) {
           </svg>
         </Link>
         <div className="flex min-w-0 grow flex-col">
-          <strong className="text-xl font-extrabold">{stageName}</strong>
+          <strong className="text-xl font-extrabold">ホーム</strong>
           <span className="truncate text-[13px] text-x-sub">タイムラインを読み込み中</span>
         </div>
       </header>
