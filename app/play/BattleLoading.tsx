@@ -14,7 +14,7 @@ export function BattleLoading({ error, onRetry }: Props) {
     <XPhone>
       <header className="flex items-center gap-4 border-b border-x-line bg-black/85 px-4 pt-2.5 pb-3 backdrop-blur-md">
         <Link
-          href="/start"
+          href="/"
           className="grid size-9 place-items-center rounded-full text-x-text hover:bg-x-text/10"
           aria-label="スタート画面にもどる"
         >
@@ -35,7 +35,7 @@ export function BattleLoading({ error, onRetry }: Props) {
             <p className="text-[13px] text-x-sub">{error}</p>
             <div className="mt-3 flex flex-wrap justify-center gap-2.5">
               <button type="button" className={PILL_PRIMARY} onClick={onRetry}>再試行</button>
-              <Link href="/start" className={`${PILL} inline-flex items-center`}>スタート画面にもどる</Link>
+              <Link href="/" className={`${PILL} inline-flex items-center`}>スタート画面にもどる</Link>
             </div>
           </>
         ) : (

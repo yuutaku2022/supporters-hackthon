@@ -9,11 +9,11 @@ import { BattleLoading } from './BattleLoading';
 import { BattleScreen } from './BattleScreen';
 
 /** 時間切れのときに移動する結果画面 */
-const RESULT_PATH = '/';
+const RESULT_PATH = '/result';
 
 /**
  * 1ゲーム分の進行
- * タイムラインをAPIからランダムに取得 → 制限時間内に冷笑を探す → 結果画面（/?score=合計点）へ
+ * タイムラインをAPIからランダムに取得 → 制限時間内に冷笑を探す → 結果画面（/result?score=合計点）へ
  * 当たり判定・採点・ヒントはサーバー（/api/posts/:id/check, /api/score, /api/hint）に任せる。
  */
 export function BattleGame() {
