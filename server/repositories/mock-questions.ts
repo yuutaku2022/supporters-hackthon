@@ -7,10 +7,9 @@ import type { QuestionRecord } from './questions';
  * 実在の人物・アカウント名・企業名は使わない。特定の属性を下げる内容にしない。
  */
 export const MOCK_QUESTIONS: QuestionRecord[] = [
-  // ---- ステージ1：タイムラインの森 ----
+  // ---- サンプル 1 ----
   {
     id: '1-1',
-    stageId: 1,
     posts: [
       { speaker: '@run_daily', text: '人生初のフルマラソン、なんとか完走できました！応援してくれたみんなありがとう' },
       {
@@ -34,7 +33,6 @@ export const MOCK_QUESTIONS: QuestionRecord[] = [
   },
   {
     id: '1-2',
-    stageId: 1,
     posts: [
       { speaker: '@kirei_machi', text: '地元のゴミ拾いボランティアに参加してきた！20人も集まってびっくり' },
       {
@@ -50,7 +48,6 @@ export const MOCK_QUESTIONS: QuestionRecord[] = [
   },
   {
     id: '1-3',
-    stageId: 1,
     posts: [
       { speaker: '@onkai_love', text: '好きなバンドの新曲、今回も最高だった…！' },
       { speaker: '@ongaku_suki', text: '新曲のサビの転調で鳥肌たった笑' },
@@ -72,10 +69,9 @@ export const MOCK_QUESTIONS: QuestionRecord[] = [
     ],
   },
 
-  // ---- ステージ2：コメント欄の洞窟 ----
+  // ---- サンプル 2 ----
   {
     id: '2-1',
-    stageId: 2,
     posts: [
       { speaker: '@jisui_hajimete', text: '自炊歴1ヶ月で手打ちパスタに挑戦してみた！形はいびつだけど美味しかった' },
       {
@@ -91,7 +87,6 @@ export const MOCK_QUESTIONS: QuestionRecord[] = [
   },
   {
     id: '2-2',
-    stageId: 2,
     posts: [
       { speaker: '@chiisana_ch', text: 'チャンネル登録者1000人いきました！見てくれてる皆さん本当にありがとう' },
       {
@@ -107,7 +102,6 @@ export const MOCK_QUESTIONS: QuestionRecord[] = [
   },
   {
     id: '2-3',
-    stageId: 2,
     posts: [
       { speaker: '@bunkasai_2nen', text: '文化祭のダンス、今日やっと全員そろって通しできた！' },
       {
@@ -129,10 +123,9 @@ export const MOCK_QUESTIONS: QuestionRecord[] = [
     ],
   },
 
-  // ---- ステージ3：ショート動画の街 ----
+  // ---- サンプル 3 ----
   {
     id: '3-1',
-    stageId: 3,
     posts: [
       { speaker: '@asakatsu_note', text: '朝5時起きで勉強するルーティン、1ヶ月続いた #朝活' },
       {
@@ -148,7 +141,6 @@ export const MOCK_QUESTIONS: QuestionRecord[] = [
   },
   {
     id: '3-2',
-    stageId: 3,
     posts: [
       { speaker: '@cafe_meguri', text: '話題のカフェ行ってきた！パフェが想像以上の大きさ #カフェ巡り' },
       { speaker: '@amai_mono', text: 'あのパフェずっと気になってる。平日なら並ばずに入れるかな' },
@@ -164,7 +156,6 @@ export const MOCK_QUESTIONS: QuestionRecord[] = [
   },
   {
     id: '3-3',
-    stageId: 3,
     posts: [
       {
         speaker: '@cool_kansou',

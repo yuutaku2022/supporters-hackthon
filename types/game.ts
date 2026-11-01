@@ -20,9 +20,8 @@ export type PublicQuestion = {
   posts: PublicPost[];
 };
 
-/** GET /api/stages/:stageId/questions */
+/** GET /api/questions（1ゲーム分をランダムに） */
 export type QuestionsResponse = {
-  stageId: number;
   questions: PublicQuestion[];
 };
 

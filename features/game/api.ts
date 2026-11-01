@@ -10,7 +10,7 @@ import type {
 
 /**
  * ブラウザから呼ぶ API（app/api/ の Route Handler）
- *   GET  /api/stages/:stageId/questions
+ *   GET  /api/questions                     1ゲーム分の問題（ランダム）
  *   POST /api/questions/:questionId/check   「冷笑」を押したポスト1件をその場で判定
  *   POST /api/questions/:questionId/judge   問題の終わりにまとめて採点・解説
  *   POST /api/questions/:questionId/hint
@@ -34,8 +34,8 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
-export async function fetchQuestions(stageId: number, signal?: AbortSignal): Promise<PublicQuestion[]> {
-  const url = `/api/stages/${stageId}/questions${location.search}`;
+export async function fetchQuestions(signal?: AbortSignal): Promise<PublicQuestion[]> {
+  const url = `/api/questions${location.search}`;
   const body = await request<QuestionsResponse>(url, { signal });
   if (!Array.isArray(body.questions)) throw new ApiError('レスポンスに questions 配列がありません');
   body.questions.forEach((q, i) => {

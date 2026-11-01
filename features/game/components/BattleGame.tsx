@@ -3,14 +3,13 @@
 import { useEffect, useState } from 'react';
 import type { JudgeResponse, PublicQuestion } from '@/types/game';
 import { ApiError, fetchQuestions, postCheck, postHint, postJudge } from '../api';
-import { stageById } from '../data/stages';
 import { START_HINTS } from '../rules';
-import type { StageResult } from '../result';
+import type { GameResult } from '../result';
 import { loadSave, writeSave } from '../save';
 import { BattleLoading } from './BattleLoading';
 import { BattleScreen } from './BattleScreen';
+import { GameEnd } from './GameEnd';
 import { JudgeScreen } from './JudgeScreen';
-import { StageEnd } from './StageEnd';
 
 type Run = {
   questions: PublicQuestion[];
@@ -28,7 +27,7 @@ type View =
   | { kind: 'loading'; error: string | null }
   | { kind: 'battle' }
   | { kind: 'judge'; result: JudgeResponse; newMonsters: string[] }
-  | { kind: 'end'; result: StageResult };
+  | { kind: 'end'; result: GameResult };
 
 const newRun = (questions: PublicQuestion[]): Run => ({
   questions,
@@ -43,12 +42,11 @@ const newRun = (questions: PublicQuestion[]): Run => ({
 });
 
 /**
- * 1ステージ分のゲーム進行
- * 問題をAPIから取得 → バトル ⇄ 撃破・解説 → ゲーム終了画面（StageResult を渡す）
- * 正解判定・ヒントはサーバー（/api/questions/:id/judge, /hint）に任せる。
+ * 1ゲーム分の進行
+ * 問題をAPIからランダムに取得 → バトル ⇄ 撃破・解説 → ゲーム終了画面（GameResult を渡す）
+ * 正解判定・ヒントはサーバー（/api/questions/:id/check, /judge, /hint）に任せる。
  */
-export function BattleGame({ stageId }: { stageId: number }) {
-  const stageName = stageById(stageId)?.name ?? `ステージ${stageId}`;
+export function BattleGame() {
   const [attempt, setAttempt] = useState(0);
   const [view, setView] = useState<View>({ kind: 'loading', error: null });
   const [run, setRun] = useState<Run | null>(null);
@@ -57,9 +55,9 @@ export function BattleGame({ stageId }: { stageId: number }) {
 
   useEffect(() => {
     const ctrl = new AbortController();
-    fetchQuestions(stageId, ctrl.signal)
+    fetchQuestions(ctrl.signal)
       .then((questions) => {
-        if (questions.length === 0) throw new ApiError('このステージの問題はまだ準備中です');
+        if (questions.length === 0) throw new ApiError('問題がまだ登録されていません');
         setRun(newRun(questions));
         setView({ kind: 'battle' });
       })
@@ -67,7 +65,7 @@ export function BattleGame({ stageId }: { stageId: number }) {
         if (!ctrl.signal.aborted) setView({ kind: 'loading', error: e.message });
       });
     return () => ctrl.abort();
-  }, [stageId, attempt]);
+  }, [attempt]);
 
   const reload = () => {
     setRun(null);
@@ -77,7 +75,7 @@ export function BattleGame({ stageId }: { stageId: number }) {
   };
 
   if (!run || view.kind === 'loading') {
-    return <BattleLoading stageName={stageName} error={view.kind === 'loading' ? view.error : null} onRetry={reload} />;
+    return <BattleLoading error={view.kind === 'loading' ? view.error : null} onRetry={reload} />;
   }
 
   const q = run.questions[run.qIndex];
@@ -124,16 +122,10 @@ export function BattleGame({ stageId }: { stageId: number }) {
       // 星：1=クリア、2=全問撃破、3=全問PERFECT
       const stars = run.perfect === total ? 3 : run.defeated === total ? 2 : 1;
       const save = loadSave();
-      writeSave({
-        ...save,
-        exp: save.exp + run.score,
-        stars: { ...save.stars, [stageId]: Math.max(save.stars[stageId] ?? 0, stars) },
-      });
+      writeSave({ ...save, exp: save.exp + run.score });
       setView({
         kind: 'end',
         result: {
-          stageId,
-          stageName,
           score: run.score,
           stars,
           total,
@@ -161,12 +153,11 @@ export function BattleGame({ stageId }: { stageId: number }) {
         />
       );
     case 'end':
-      return <StageEnd result={view.result} onRetry={reload} />;
+      return <GameEnd result={view.result} onRetry={reload} />;
     default:
       return (
         <BattleScreen
           key={`${attempt}-${run.qIndex}`}
-          stageName={stageName}
           question={q}
           qIndex={run.qIndex}
           total={total}

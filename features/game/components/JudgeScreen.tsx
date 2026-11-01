@@ -23,7 +23,7 @@ type Props = {
   result: JudgeResponse;
   /** この判定で冷笑ずかんに新しく登録されたモンスター */
   newMonsters: string[];
-  /** ステージ最後の問題か（ボタンの文言用） */
+  /** 最後の問題か（ボタンの文言用） */
   isLast: boolean;
   /** 次の問題（最後ならゲーム終了画面）へ進む */
   onNext: () => void;
@@ -114,7 +114,7 @@ export function JudgeScreen({ question: q, result, newMonsters, isLast, onNext }
 
       <div className="grow" />
       <button type="button" className={`${BIG_BUTTON} w-full bg-game-pink text-white [text-shadow:2px_2px_0_var(--color-game-ink)]`} onClick={onNext}>
-        {isLast ? 'ステージクリア！' : 'つぎのタイムラインへ ▶'}
+        {isLast ? '結果を見る' : 'つぎのタイムラインへ ▶'}
       </button>
     </main>
   );

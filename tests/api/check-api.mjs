@@ -1,11 +1,10 @@
 // APIのレスポンス確認スクリプト
 //   npm run api:check                               → http://localhost:3000/api（npm run dev 中に実行）
 //   npm run api:check -- https://xxx.vercel.app/api → Preview / Production を確認
-// 各ステージの GET {base}/stages/{id}/questions を叩き、ステータス・件数・形をチェックする。
+// GET {base}/questions を叩き、ステータス・件数・形をチェックする。
 // 答え（cold）や解説（explanation）が漏れていないか、最初の1問で判定APIが返るかも確認する。
 
 const base = (process.argv[2] || 'http://localhost:3000/api').replace(/\/$/, '');
-const stageIds = [1, 2, 3, 4, 5, 6];
 
 function problemOf(q) {
   if (typeof q !== 'object' || q === null) return 'オブジェクトではない';
@@ -36,28 +35,26 @@ console.log(`API: ${base}\n`);
 let failed = 0;
 let firstQuestion = null;
 
-for (const id of stageIds) {
-  const url = `${base}/stages/${id}/questions`;
+{
+  const url = `${base}/questions`;
   try {
     const { res, ms, body, text } = await getJson(url);
     if (body === null) {
       failed++;
-      console.log(`NG  stage ${id}  HTTP ${res.status}  ${ms}ms  JSONではない: ${text.slice(0, 80)}`);
-      continue;
-    }
-    if (!res.ok || !Array.isArray(body.questions)) {
+      console.log(`NG  questions  HTTP ${res.status}  ${ms}ms  JSONではない: ${text.slice(0, 80)}`);
+    } else if (!res.ok || !Array.isArray(body.questions) || body.questions.length === 0) {
       failed++;
-      console.log(`NG  stage ${id}  HTTP ${res.status}  ${ms}ms  ${JSON.stringify(body).slice(0, 80)}`);
-      continue;
+      console.log(`NG  questions  HTTP ${res.status}  ${ms}ms  ${JSON.stringify(body).slice(0, 80)}`);
+    } else {
+      const problems = body.questions.map(problemOf).map((p, i) => (p ? `questions[${i}]: ${p}` : null)).filter(Boolean);
+      if (problems.length) failed++;
+      console.log(`${problems.length ? 'NG' : 'OK'}  questions  HTTP ${res.status}  ${ms}ms  ${body.questions.length}問`);
+      problems.forEach((p) => console.log(`      ${p}`));
+      firstQuestion = body.questions[0];
     }
-    const problems = body.questions.map(problemOf).map((p, i) => (p ? `questions[${i}]: ${p}` : null)).filter(Boolean);
-    if (problems.length) failed++;
-    console.log(`${problems.length ? 'NG' : 'OK'}  stage ${id}  HTTP ${res.status}  ${ms}ms  ${body.questions.length}問`);
-    problems.forEach((p) => console.log(`      ${p}`));
-    firstQuestion ??= body.questions[0] ?? null;
   } catch (e) {
     failed++;
-    console.log(`NG  stage ${id}  接続できません: ${e.cause?.code ?? e.message}`);
+    console.log(`NG  questions  接続できません: ${e.cause?.code ?? e.message}`);
   }
 }
 

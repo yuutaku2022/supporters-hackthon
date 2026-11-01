@@ -4,9 +4,7 @@ import type { JudgeResponse } from '@/types/game';
  * バトルが終わったときにゲーム終了画面へ渡すデータ
  * ゲーム終了画面（担当は別メンバー）は、これと「もういちど」の onRetry だけを受け取る。
  */
-export type StageResult = {
-  stageId: number;
-  stageName: string;
+export type GameResult = {
   /** 合計スコア */
   score: number;
   /** 0〜3。1=最後まで終えた、2=全問で1体以上撃破、3=全問PERFECT */

@@ -8,7 +8,6 @@ import { PILL, PILL_DANGER, PILL_PRIMARY } from './styles';
 import { XPhone } from './XPhone';
 
 type Props = {
-  stageName: string;
   question: PublicQuestion;
   qIndex: number;
   total: number;
@@ -37,7 +36,7 @@ const FINISH_DELAY_MS = 700;
  * 冷笑ポストを全部見つけるか時間切れで、この問題は終わり。
  * 問題が変わるたびに key を変えて作り直す前提（状態・タイマーをリセットするため）。
  */
-export function BattleScreen({ stageName, question: q, qIndex, total, score, combo, hints, onCheck, onFinish, sending, error, onHint }: Props) {
+export function BattleScreen({ question: q, qIndex, total, score, combo, hints, onCheck, onFinish, sending, error, onHint }: Props) {
   const [marks, setMarks] = useState<Record<number, Mark>>({});
   const [checking, setChecking] = useState<number | null>(null);
   const [checkError, setCheckError] = useState<string | null>(null);
@@ -117,7 +116,7 @@ export function BattleScreen({ stageName, question: q, qIndex, total, score, com
         <div className="flex min-w-0 grow flex-col">
           <strong className="text-xl font-extrabold">ホーム</strong>
           <span className="truncate text-[13px] text-x-sub">
-            {stageName} ・ {qIndex + 1}/{total} ・ {score.toLocaleString()}pt
+            {qIndex + 1}/{total} ・ {score.toLocaleString()}pt
           </span>
         </div>
         <span
