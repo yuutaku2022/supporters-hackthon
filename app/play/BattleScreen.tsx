@@ -299,7 +299,7 @@ function PauseMenu({ onClose }: { onClose: () => void }) {
           <Link href="/settings" className={`${PILL} flex min-h-11 items-center justify-center`}>
             設定
           </Link>
-          <Link href="/start" className={`${PILL_DANGER} flex min-h-11 items-center justify-center`}>
+          <Link href="/" className={`${PILL_DANGER} flex min-h-11 items-center justify-center`}>
             バトルをやめる
           </Link>
         </div>

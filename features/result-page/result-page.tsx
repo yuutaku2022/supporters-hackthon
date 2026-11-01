@@ -5,12 +5,11 @@ import { useEffect, useState } from "react";
 
 const question = "@Grok スコアを教えて";
 const answerPrefix = "あなたのスコアは ";
-const answerScore = "1,280";
 const answerSuffix = " 点でした。";
-const answer = `${answerPrefix}${answerScore}${answerSuffix}`;
 
 type ConversationProps = {
   onReplay: () => void;
+  score: number;
 };
 
 function GrokMark({ className = "" }: { className?: string }) {
@@ -31,7 +30,9 @@ function GrokMark({ className = "" }: { className?: string }) {
   );
 }
 
-function Conversation({ onReplay }: ConversationProps) {
+function Conversation({ onReplay, score }: ConversationProps) {
+  const answerScore = score.toLocaleString("ja-JP");
+  const answer = `${answerPrefix}${answerScore}${answerSuffix}`;
   const [typedQuestion, setTypedQuestion] = useState("");
   const [typedAnswer, setTypedAnswer] = useState("");
   const [stage, setStage] = useState<
@@ -83,7 +84,7 @@ function Conversation({ onReplay }: ConversationProps) {
     timer = window.setTimeout(typeQuestion, reducedMotion ? 0 : 400);
 
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [answer]);
 
   const visiblePrefix = typedAnswer.slice(0, answerPrefix.length);
   const visibleScore = typedAnswer.slice(
@@ -170,7 +171,7 @@ function Conversation({ onReplay }: ConversationProps) {
       <footer className="shrink-0 border-t border-white/10 px-5 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <Link
           className="flex min-h-12 w-full items-center justify-center rounded-full border border-white/20 text-sm font-semibold text-white/90 transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none"
-          href="/start"
+          href="/"
         >
           スタート画面に戻る
         </Link>
@@ -179,13 +180,14 @@ function Conversation({ onReplay }: ConversationProps) {
   );
 }
 
-export function ResultPage() {
+export function ResultPage({ score }: { score: number }) {
   const [conversationKey, setConversationKey] = useState(0);
 
   return (
     <Conversation
       key={conversationKey}
       onReplay={() => setConversationKey((key) => key + 1)}
+      score={score}
     />
   );
 }

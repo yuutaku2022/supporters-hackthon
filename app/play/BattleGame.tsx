@@ -25,11 +25,11 @@ const newRun = (questions: PublicQuestion[]): Run => ({
 });
 
 /** 全部終わったときに移動する結果画面 */
-const RESULT_PATH = '/';
+const RESULT_PATH = '/result';
 
 /**
  * 1ゲーム分の進行
- * 問題をAPIからランダムに取得 → タイムラインを順番に遊ぶ → 結果画面（/?score=合計点）へ
+ * 問題をAPIからランダムに取得 → タイムラインを順番に遊ぶ → 結果画面（/result?score=合計点）へ
  * 正解判定・ヒントはサーバー（/api/questions/:id/check, /judge, /hint）に任せる。
  */
 export function BattleGame() {
