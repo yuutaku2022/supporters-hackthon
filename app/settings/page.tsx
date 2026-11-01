@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { BackButton } from '@/components/common/BackButton';
-import { XPhone } from '@/features/game/components/XPhone';
+import { XPhone } from '@/app/play/XPhone';
 
 export const metadata: Metadata = { title: '設定 | 冷笑ハンター' };
 

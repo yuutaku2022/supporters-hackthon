@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import type { CheckResponse, PublicPost, PublicQuestion } from '@/types/game';
-import { TIME_LIMIT } from '../rules';
+import { TIME_LIMIT } from '@/features/game/rules';
 import { PILL, PILL_DANGER, PILL_PRIMARY } from './styles';
 import { XPhone } from './XPhone';
 

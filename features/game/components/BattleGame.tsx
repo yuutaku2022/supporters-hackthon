@@ -6,8 +6,8 @@ import { ApiError, fetchQuestions, postCheck, postHint, postJudge } from '../api
 import { START_HINTS } from '../rules';
 import type { GameResult } from '../result';
 import { loadSave, writeSave } from '../save';
-import { BattleLoading } from './BattleLoading';
-import { BattleScreen } from './BattleScreen';
+import { BattleLoading } from '@/app/play/BattleLoading';
+import { BattleScreen } from '@/app/play/BattleScreen';
 import { GameEnd } from './GameEnd';
 import { JudgeScreen } from './JudgeScreen';
 
