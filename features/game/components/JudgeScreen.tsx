@@ -17,15 +17,22 @@ const CARD = 'w-full rounded-[20px] border-4 border-game-ink p-4 shadow-[0_6px_0
 const OUTLINE_TEXT = '[text-shadow:4px_4px_0_var(--color-game-ink),-2px_-2px_0_var(--color-game-ink),2px_-2px_0_var(--color-game-ink),-2px_2px_0_var(--color-game-ink)]';
 
 type Props = {
+  /** 今の問題（ポスト一覧） */
   question: PublicQuestion;
+  /** judge API の採点結果（命中・見逃し・ハズレ、評価、点数、冷笑ポストの正体と解説） */
   result: JudgeResponse;
   /** この判定で冷笑ずかんに新しく登録されたモンスター */
   newMonsters: string[];
+  /** ステージ最後の問題か（ボタンの文言用） */
   isLast: boolean;
+  /** 次の問題（最後ならゲーム終了画面）へ進む */
   onNext: () => void;
 };
 
-/** 撃破・解説画面（判定結果はサーバーから） */
+/**
+ * 撃破・解説画面（仮）
+ * 本番の画面は別メンバーが作る。Props の形はそのままで、中身を作り替えてください。
+ */
 export function JudgeScreen({ question: q, result, newMonsters, isLast, onNext }: Props) {
   const defeated = result.hits.length > 0;
   // 撃破なら当てたモンスター、にげられたら見逃したモンスターを出す
