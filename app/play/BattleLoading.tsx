@@ -14,9 +14,9 @@ export function BattleLoading({ error, onRetry }: Props) {
     <XPhone>
       <header className="flex items-center gap-4 border-b border-x-line bg-black/85 px-4 pt-2.5 pb-3 backdrop-blur-md">
         <Link
-          href="/"
+          href="/start"
           className="grid size-9 place-items-center rounded-full text-x-text hover:bg-x-text/10"
-          aria-label="トップにもどる"
+          aria-label="スタート画面にもどる"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
             <path d="M19 12H5M11 6l-6 6 6 6" />
@@ -35,7 +35,7 @@ export function BattleLoading({ error, onRetry }: Props) {
             <p className="text-[13px] text-x-sub">{error}</p>
             <div className="mt-3 flex flex-wrap justify-center gap-2.5">
               <button type="button" className={PILL_PRIMARY} onClick={onRetry}>再試行</button>
-              <Link href="/" className={`${PILL} inline-flex items-center`}>トップにもどる</Link>
+              <Link href="/start" className={`${PILL} inline-flex items-center`}>スタート画面にもどる</Link>
             </div>
           </>
         ) : (
