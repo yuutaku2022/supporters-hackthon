@@ -1,0 +1,90 @@
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { useEffect, useLayoutEffect, useState } from 'react';
+import { evaluateAchievement } from '@/DB/achievement';
+import { TIME_LIMIT } from '@/features/game/rules';
+import type { PublicPost } from '@/types/game';
+import { ApiError, fetchTimeline, postCheck, postScore } from './api';
+import { BattleLoading } from './BattleLoading';
+import { BattleScreen } from './BattleScreen';
+
+/** 時間切れのときに移動する結果画面 */
+const RESULT_PATH = '/result';
+
+/**
+ * 1ゲーム分の進行
+ * タイムラインをAPIからランダムに取得 → 制限時間内に冷笑を探す → 結果・実績画面へ
+ * 当たり判定・採点はサーバー（/api/posts/:id/check, /api/score）に任せる。
+ */
+export function BattleGame() {
+  const router = useRouter();
+  const [attempt, setAttempt] = useState(0);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [posts, setPosts] = useState<PublicPost[] | null>(null);
+  const [sending, setSending] = useState(false);
+  const [finishError, setFinishError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+    fetchTimeline(ctrl.signal)
+      .then((list) => {
+        if (list.length === 0) throw new ApiError('投稿がまだ登録されていません');
+        setPosts(list);
+      })
+      .catch((e: Error) => {
+        if (!ctrl.signal.aborted) setLoadError(e.message);
+      });
+    return () => ctrl.abort();
+  }, [attempt]);
+
+  /** ゲームを捨てて、新しいタイムラインで最初から */
+  const reset = () => {
+    setPosts(null);
+    setLoadError(null);
+    setSending(false);
+    setFinishError(null);
+    setAttempt((a) => a + 1);
+  };
+
+  // Next.js（Cache Components）は画面を移動しても /play を隠して残し、戻るとそのまま再表示する。
+  // ゲームは続きから再開させたくないので、隠れるとき（＝ページを離れるとき）にリセットする。
+  useLayoutEffect(() => reset, []);
+
+  if (!posts) return <BattleLoading error={loadError} onRetry={reset} />;
+
+  const onCheck = async (postId: string) => (await postCheck(postId)).cold;
+
+  // 時間切れ：押したポストからサーバーでスコアを計算して結果画面へ
+  const onFinish = async (pressed: string[]) => {
+    setSending(true);
+    setFinishError(null);
+    try {
+      const r = await postScore(pressed, posts.map((post) => post.id));
+      const stats = { score: r.score, hits: r.hits, wrong: r.wrong, missed: r.missed, timedOut: true };
+      const achievement = evaluateAchievement(stats);
+
+      const params = new URLSearchParams({
+        score: String(r.score),
+        achievement: achievement.id,
+        resultId: crypto.randomUUID(),
+      });
+      router.push(`${RESULT_PATH}?${params.toString()}`);
+    } catch (e) {
+      setFinishError((e as Error).message);
+      setSending(false);
+    }
+  };
+
+  return (
+    <BattleScreen
+      key={attempt}
+      posts={posts}
+      timeLimit={TIME_LIMIT}
+      onCheck={onCheck}
+      onFinish={onFinish}
+      sending={sending}
+      error={finishError}
+    />
+  );
+}

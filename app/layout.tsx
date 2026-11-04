@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ゲーム結果 | Grok",
-  description: "Grokとのチャットでゲームのスコアを確認します。",
+  title: "ちょっ，おまw",
+  description: "タイムラインから冷笑投稿を見つけるゲームです。",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
