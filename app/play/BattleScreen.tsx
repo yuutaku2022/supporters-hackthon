@@ -85,11 +85,13 @@ export function BattleScreen({ posts, onCheck, onFinish, sending, error }: Props
 
   return (
     <XPhone>
-      {/* ヘッダー：画面名・スコア／残り時間 */}
+      {/* ヘッダー：画面名・スコア・命中/ハズレ／残り時間 */}
       <header className="relative flex items-center gap-4 border-b border-x-line bg-black/85 px-4 pt-2.5 pb-3 backdrop-blur-md">
         <div className="flex min-w-0 grow flex-col">
           <strong className="text-xl font-extrabold">ホーム</strong>
-          <span className="truncate text-[13px] text-x-sub">{scoreOf(hitCount, missCount).toLocaleString()}pt</span>
+          <span className="truncate text-[13px] text-x-sub tabular-nums" aria-live="polite">
+            {scoreOf(hitCount, missCount).toLocaleString()}pt ・ <span className="text-x-pink">命中 {hitCount}</span> ・ ハズレ {missCount}
+          </span>
         </div>
         <span
           className={`min-w-9 rounded-full border px-2 py-0.5 text-center font-extrabold tabular-nums ${
@@ -145,16 +147,13 @@ export function BattleScreen({ posts, onCheck, onFinish, sending, error }: Props
         </div>
       )}
 
-      {/* 下部：操作バー（左：家＝一番上へ ／ 中：命中・ハズレ ／ 右：一時停止） */}
-      <footer className="flex items-center gap-3 border-t border-x-line bg-x-bg px-4 pt-2.5 pb-[calc(10px+env(safe-area-inset-bottom))]">
+      {/* 下部：操作バー（左：家＝一番上へ ／ 右：一時停止） */}
+      <footer className="flex items-center justify-between gap-3 border-t border-x-line bg-x-bg px-4 pt-2.5 pb-[calc(10px+env(safe-area-inset-bottom))]">
         <button type="button" className={ICON_BUTTON} onClick={scrollToTop} aria-label="タイムラインの一番上へ">
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
             <path d="M3.5 10.5 12 3.5l8.5 7V20a.5.5 0 0 1-.5.5h-5.5v-6h-5v6H4a.5.5 0 0 1-.5-.5z" />
           </svg>
         </button>
-        <span className="mx-auto text-sm text-x-sub tabular-nums" aria-live="polite">
-          <span className="text-x-pink">命中 {hitCount}</span> ・ ハズレ {missCount}
-        </span>
         <button
           type="button"
           className={ICON_BUTTON}
