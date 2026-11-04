@@ -11,7 +11,7 @@ const mplusRounded = M_PLUS_Rounded_1c({
 });
 
 export const metadata: Metadata = {
-  title: '冷笑ハンター',
+  title: 'ちょっ，おまw',
   description: '冷笑モンスターの弱点（冷笑しているフレーズ）を見つけてたおすゲーム',
 };
 

@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "冷笑ハンター",
+  title: "ちょっ，おまw",
   description: "タイムラインから冷笑ポストを見つけるゲームです。",
 };
 

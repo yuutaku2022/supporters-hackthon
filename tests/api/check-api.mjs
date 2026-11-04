@@ -43,17 +43,14 @@ try {
     const c = await call(`/posts/${encodeURIComponent(ids[0])}/check`, { method: 'POST' });
     report(c.res.ok && typeof c.body?.cold === 'boolean', `check ${ids[0]}`, `HTTP ${c.res.status}  ${c.ms}ms  ${JSON.stringify(c.body)}`);
 
-    const s = await call('/score', { method: 'POST', body: JSON.stringify({ pressed: ids.slice(0, 3) }) });
-    report(s.res.ok && typeof s.body?.score === 'number', 'score', `HTTP ${s.res.status}  ${s.ms}ms  ${JSON.stringify(s.body)}`);
+    const s = await call('/score', { method: 'POST', body: JSON.stringify({ pressed: ids.slice(0, 3), timeline: ids }) });
+    report(s.res.ok && typeof s.body?.score === 'number' && typeof s.body?.missed === 'number', 'score', `HTTP ${s.res.status}  ${s.ms}ms  ${JSON.stringify(s.body)}`);
 
     const h = await call('/hint', { method: 'POST', body: JSON.stringify({ timeline: ids, pressed: [] }) });
     report(h.res.ok && 'postId' in (h.body ?? {}), 'hint', `HTTP ${h.res.status}  ${h.ms}ms  ${JSON.stringify(h.body)}`);
   }
 } catch (e) {
   report(false, 'API', `接続できません: ${e.cause?.code ?? e.message}`);
-}
-
-console.log(failed ? `\n${failed}件 NG` : '\nすべて OK');
 }
 
 console.log(failed ? `\n${failed}件 NG` : '\nすべて OK');
