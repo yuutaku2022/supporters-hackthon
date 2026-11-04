@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "ちょっ，おまw",
-  description: "タイムラインから冷笑ポストを見つけるゲームです。",
+  description: "タイムラインから冷笑投稿を見つけるゲームです。",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
