@@ -2,25 +2,36 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import type { PublicPost } from '@/types/game';
+import type { CheckResponse, PublicPost, PublicQuestion } from '@/types/game';
 import { scoreOf, TIME_LIMIT } from '@/features/game/rules';
 import { PILL, PILL_DANGER, PILL_PRIMARY } from './styles';
 import { XPhone } from './XPhone';
 
-type Props = {
-  /** タイムラインに並べるポスト */
+type TimelineProps = {
   posts: PublicPost[];
   hints: number;
-  /** 「冷笑」を押したポスト1件をサーバーで判定する（冷笑なら true） */
   onCheck: (postId: string) => Promise<boolean>;
-  /** 時間切れ。押したポストから採点（サーバー）。採点中は sending=true */
-  onFinish: (pressed: string[]) => void;
+  onFinish: (pressed: string[]) => void | Promise<void>;
   sending: boolean;
-  /** 採点 API が失敗したときのメッセージ（「もう一度」で再送できる） */
   error: string | null;
-  /** ヒントを使う。サーバーから教えてもらった冷笑ポストの id を返す */
   onHint: (pressed: string[]) => Promise<string | null>;
 };
+
+type QuestionProps = {
+  question: PublicQuestion;
+  qIndex: number;
+  total: number;
+  score: number;
+  combo: number;
+  hints: number;
+  onCheck: (index: number, found: number[]) => Promise<CheckResponse>;
+  onFinish: (selected: number[], timeLeft: number) => void | Promise<void>;
+  sending: boolean;
+  error: string | null;
+  onHint: (selected: number[]) => Promise<number | null>;
+};
+
+type Props = TimelineProps | QuestionProps;
 
 type Mark = 'hit' | 'miss';
 
@@ -30,15 +41,17 @@ type Mark = 'hit' | 'miss';
  * 制限時間内にできるだけ多く見つける。時間切れで終わり。
  * ゲームをやり直すときは key を変えて作り直す前提（状態・タイマーをリセットするため）。
  */
-export function BattleScreen({ posts, hints, onCheck, onFinish, sending, error, onHint }: Props) {
+export function BattleScreen(props: Props) {
+  const questionMode = 'question' in props;
+  const posts = questionMode
+    ? props.question.posts.map((post, index) => ({ ...post, id: String(index) }))
+    : props.posts;
+  const { hints, sending, error } = props;
   const [marks, setMarks] = useState<Record<string, Mark>>({});
   const [checking, setChecking] = useState<string | null>(null);
   const [checkError, setCheckError] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
   const [hinted, setHinted] = useState<string | null>(null);
-  const [hintBusy, setHintBusy] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const done = useRef(false);
   const [hintBusy, setHintBusy] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const done = useRef(false);
@@ -52,7 +65,11 @@ export function BattleScreen({ posts, hints, onCheck, onFinish, sending, error, 
   const finish = () => {
     if (done.current) return;
     done.current = true;
-    onFinish(pressed);
+    if (questionMode) {
+      void props.onFinish(pressed.map(Number), timeLeft);
+    } else {
+      void props.onFinish(pressed);
+    }
   };
   const retryFinish = () => {
     done.current = false;
@@ -76,7 +93,9 @@ export function BattleScreen({ posts, hints, onCheck, onFinish, sending, error, 
     setChecking(postId);
     setCheckError(null);
     try {
-      const cold = await onCheck(postId);
+      const cold = questionMode
+        ? (await props.onCheck(Number(postId), pressed.map(Number))).cold
+        : await props.onCheck(postId);
       setMarks((m) => ({ ...m, [postId]: cold ? 'hit' : 'miss' }));
     } catch {
       setCheckError('判定できませんでした。もう一度押してください');
@@ -86,11 +105,16 @@ export function BattleScreen({ posts, hints, onCheck, onFinish, sending, error, 
   };
 
   const hint = async () => {
-  const hint = async () => {
     if (hints <= 0 || hintBusy || busy) return;
     setHintBusy(true);
     try {
-      const postId = await onHint(pressed);
+      let postId: string | null;
+      if (questionMode) {
+        const index = await props.onHint(pressed.map(Number));
+        postId = index === null ? null : String(index);
+      } else {
+        postId = await props.onHint(pressed);
+      }
       setHinted(postId);
       // あやしいポストまでスクロール
       if (postId) document.getElementById(postDomId(postId))?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -109,7 +133,9 @@ export function BattleScreen({ posts, hints, onCheck, onFinish, sending, error, 
       <header className="relative flex items-center gap-4 border-b border-x-line bg-black/85 px-4 pt-2.5 pb-3 backdrop-blur-md">
         <div className="flex min-w-0 grow flex-col">
           <strong className="text-xl font-extrabold">ホーム</strong>
-          <span className="truncate text-[13px] text-x-sub">{scoreOf(hitCount, missCount).toLocaleString()}pt</span>
+          <span className="truncate text-[13px] text-x-sub">
+            {(questionMode ? props.score : scoreOf(hitCount, missCount)).toLocaleString()}pt
+          </span>
         </div>
         <span
           className={`min-w-9 rounded-full border px-2 py-0.5 text-center font-extrabold tabular-nums ${
@@ -207,15 +233,6 @@ type PostProps = {
   disabled: boolean;
   onPress: () => void;
 };
-  post: PublicPost;
-  seed: string;
-  minutesAgo: number;
-  mark: Mark | undefined;
-  checking: boolean;
-  hinted: boolean;
-  disabled: boolean;
-  onPress: () => void;
-};
 
 /** タイムラインのポスト1件。アクションバーの右端が「冷笑」ボタン（押すとその場で判定、取り消しはできない） */
 function Post({ domId, post, seed, minutesAgo, mark, checking, hinted, disabled, onPress }: PostProps) {
@@ -226,10 +243,7 @@ function Post({ domId, post, seed, minutesAgo, mark, checking, hinted, disabled,
       id={domId}
       className={`flex gap-2.5 border-b border-x-line px-4 py-3 transition-colors ${
         mark === 'hit' ? 'bg-x-pink/10 shadow-[inset_3px_0_0_var(--color-x-pink)]' : mark === 'miss' ? 'opacity-50' : ''
-      } ${hinted ?'animate-x-hint shadow-[inset_3px_0_0_var(--color-x-blue)] motion-reduce:animate-none motion-reduce:bg-x-blue/35' : ''}`}
-      className={`flex gap-2.5 border-b border-x-line px-4 py-3 transition-colors ${
-        mark === 'hit' ? 'bg-x-pink/10 shadow-[inset_3px_0_0_var(--color-x-pink)]' : mark === 'miss' ? 'opacity-50' : ''
-      } ${hinted ?'animate-x-hint shadow-[inset_3px_0_0_var(--color-x-blue)] motion-reduce:animate-none motion-reduce:bg-x-blue/35' : ''}`}
+      } ${hinted ? 'animate-x-hint shadow-[inset_3px_0_0_var(--color-x-blue)] motion-reduce:animate-none motion-reduce:bg-x-blue/35' : ''}`}
     >
       <Avatar seed={post.speaker} letter={name} />
       <div className="min-w-0 grow">
