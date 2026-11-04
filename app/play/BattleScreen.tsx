@@ -10,7 +10,6 @@ import { XPhone } from './XPhone';
 type Props = {
   /** タイムラインに並べるポスト */
   posts: PublicPost[];
-  hints: number;
   /** 「冷笑」を押したポスト1件をサーバーで判定する（冷笑なら true） */
   onCheck: (postId: string) => Promise<boolean>;
   /** 時間切れ。押したポストから採点（サーバー）。採点中は sending=true */
@@ -18,8 +17,6 @@ type Props = {
   sending: boolean;
   /** 採点 API が失敗したときのメッセージ（「もう一度」で再送できる） */
   error: string | null;
-  /** ヒントを使う。サーバーから教えてもらった冷笑ポストの id を返す */
-  onHint: (pressed: string[]) => Promise<string | null>;
 };
 
 type Mark = 'hit' | 'miss';
@@ -30,15 +27,14 @@ type Mark = 'hit' | 'miss';
  * 制限時間内にできるだけ多く見つける。時間切れで終わり。
  * ゲームをやり直すときは key を変えて作り直す前提（状態・タイマーをリセットするため）。
  */
-export function BattleScreen({ posts, hints, onCheck, onFinish, sending, error, onHint }: Props) {
+export function BattleScreen({ posts, onCheck, onFinish, sending, error }: Props) {
   const [marks, setMarks] = useState<Record<string, Mark>>({});
   const [checking, setChecking] = useState<string | null>(null);
   const [checkError, setCheckError] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
-  const [hinted, setHinted] = useState<string | null>(null);
-  const [hintBusy, setHintBusy] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const done = useRef(false);
+  const timelineRef = useRef<HTMLDivElement>(null);
 
   const pressed = Object.keys(marks);
   const hitCount = pressed.filter((id) => marks[id] === 'hit').length;
@@ -82,20 +78,8 @@ export function BattleScreen({ posts, hints, onCheck, onFinish, sending, error, 
     }
   };
 
-  const hint = async () => {
-    if (hints <= 0 || hintBusy || busy) return;
-    setHintBusy(true);
-    try {
-      const postId = await onHint(pressed);
-      setHinted(postId);
-      // あやしいポストまでスクロール
-      if (postId) document.getElementById(postDomId(postId))?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    } catch {
-      /* ヒントが取れなくてもバトルは続ける */
-    } finally {
-      setHintBusy(false);
-    }
-  };
+  // 家のマーク：タイムラインの一番上へ
+  const scrollToTop = () => timelineRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
 
   const danger = timeLeft <= 10;
 
@@ -123,7 +107,7 @@ export function BattleScreen({ posts, hints, onCheck, onFinish, sending, error, 
         </div>
       </header>
 
-      <div className="grow overflow-y-auto">
+      <div ref={timelineRef} className="grow overflow-y-auto">
         <p className="border-b border-x-line px-4 py-2.5 text-center text-sm text-x-sub">
           時間内に<strong className="text-x-pink">冷笑しているポスト</strong>をできるだけ見つけよう
         </p>
@@ -131,13 +115,11 @@ export function BattleScreen({ posts, hints, onCheck, onFinish, sending, error, 
         {posts.map((post, i) => (
           <Post
             key={post.id}
-            domId={postDomId(post.id)}
             post={post}
             seed={post.id}
             minutesAgo={(i + 1) * 3}
             mark={marks[post.id]}
             checking={checking === post.id}
-            hinted={hinted === post.id && !marks[post.id]}
             disabled={busy || checking !== null}
             onPress={() => press(post.id)}
           />
@@ -163,23 +145,26 @@ export function BattleScreen({ posts, hints, onCheck, onFinish, sending, error, 
         </div>
       )}
 
-      {/* 下部：操作バー */}
+      {/* 下部：操作バー（左：家＝一番上へ ／ 中：命中・ハズレ ／ 右：一時停止） */}
       <footer className="flex items-center gap-3 border-t border-x-line bg-x-bg px-4 pt-2.5 pb-[calc(10px+env(safe-area-inset-bottom))]">
-        <button type="button" className={PILL} onClick={hint} disabled={hints <= 0 || hintBusy || busy}>
-          ヒント ×{hints}
+        <button type="button" className={ICON_BUTTON} onClick={scrollToTop} aria-label="タイムラインの一番上へ">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+            <path d="M3.5 10.5 12 3.5l8.5 7V20a.5.5 0 0 1-.5.5h-5.5v-6h-5v6H4a.5.5 0 0 1-.5-.5z" />
+          </svg>
         </button>
-        <span className="ml-auto text-sm text-x-sub tabular-nums" aria-live="polite">
+        <span className="mx-auto text-sm text-x-sub tabular-nums" aria-live="polite">
           <span className="text-x-pink">命中 {hitCount}</span> ・ ハズレ {missCount}
         </span>
         <button
           type="button"
-          className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-full text-x-text hover:bg-x-text/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-x-blue"
+          className={ICON_BUTTON}
           onClick={() => setMenuOpen(true)}
-          aria-label="メニュー（一時停止）"
+          aria-label="一時停止"
           aria-haspopup="dialog"
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
-            <path d="M4 6h16M4 12h16M4 18h16" />
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <rect x="6" y="4.5" width="4" height="15" rx="1" />
+            <rect x="14" y="4.5" width="4" height="15" rx="1" />
           </svg>
         </button>
       </footer>
@@ -189,31 +174,29 @@ export function BattleScreen({ posts, hints, onCheck, onFinish, sending, error, 
   );
 }
 
-const postDomId = (postId: string) => `post-${postId}`;
+/** 下のバーの丸いアイコンボタン */
+const ICON_BUTTON =
+  'grid size-11 shrink-0 cursor-pointer place-items-center rounded-full text-x-text hover:bg-x-text/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-x-blue';
 
 type PostProps = {
-  /** ヒントでスクロールするときの目印 */
-  domId: string;
   post: PublicPost;
   seed: string;
   minutesAgo: number;
   mark: Mark | undefined;
   checking: boolean;
-  hinted: boolean;
   disabled: boolean;
   onPress: () => void;
 };
 
 /** タイムラインのポスト1件。アクションバーの右端が「冷笑」ボタン（押すとその場で判定、取り消しはできない） */
-function Post({ domId, post, seed, minutesAgo, mark, checking, hinted, disabled, onPress }: PostProps) {
+function Post({ post, seed, minutesAgo, mark, checking, disabled, onPress }: PostProps) {
   const name = displayName(post.speaker);
   const stats = fakeStats(seed);
   return (
     <article
-      id={domId}
       className={`flex gap-2.5 border-b border-x-line px-4 py-3 transition-colors ${
         mark === 'hit' ? 'bg-x-pink/10 shadow-[inset_3px_0_0_var(--color-x-pink)]' : mark === 'miss' ? 'opacity-50' : ''
-      } ${hinted ?'animate-x-hint shadow-[inset_3px_0_0_var(--color-x-blue)] motion-reduce:animate-none motion-reduce:bg-x-blue/35' : ''}`}
+      }`}
     >
       <Avatar seed={post.speaker} letter={name} />
       <div className="min-w-0 grow">
@@ -222,9 +205,6 @@ function Post({ domId, post, seed, minutesAgo, mark, checking, hinted, disabled,
           <span className="truncate text-x-sub">
             {post.speaker} ・ {minutesAgo}分
           </span>
-          {hinted && (
-            <span className="ml-auto shrink-0 rounded-full bg-x-blue px-2 py-px text-xs font-extrabold text-white">あやしい</span>
-          )}
         </div>
         <p className="mt-0.5 leading-relaxed wrap-anywhere whitespace-pre-wrap">{post.text}</p>
 
