@@ -54,4 +54,7 @@ try {
 }
 
 console.log(failed ? `\n${failed}件 NG` : '\nすべて OK');
+}
+
+console.log(failed ? `\n${failed}件 NG` : '\nすべて OK');
 process.exitCode = failed ? 1 : 0;
