@@ -46,7 +46,7 @@ function XLogo({ className = "size-4" }: { className?: string }) {
   );
 }
 
-function Conversation({ onReplay, score, achievement, achievementSaveError }: ConversationProps) {
+function Conversation({ onReplay, score, achievement }: ConversationProps) {
   const answerScore = score.toLocaleString("ja-JP");
   const titleText = achievement?.title ?? "なし";
   const answer = `${answerPrefix}${answerScore}${answerMiddle}${titleText}${answerSuffix}`;

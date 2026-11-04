@@ -10,7 +10,6 @@ import { XPhone } from './XPhone';
 /** /play で使っている形：1本の長いタイムライン */
 type TimelineProps = {
   posts: PublicPost[];
-  hints: number;
   timeLimit: number;
   onCheck: (postId: string) => Promise<boolean>;
   onFinish: (pressed: string[]) => void | Promise<void>;
@@ -52,14 +51,12 @@ export function BattleScreen(props: Props) {
   const posts = questionMode
     ? props.question.posts.map((post, index) => ({ ...post, id: String(index) }))
     : props.posts;
-  const { hints, sending, error, timeLimit } = props;
+  const { sending, error, timeLimit } = props;
   const [marks, setMarks] = useState<Record<string, Mark>>({});
   const [checking, setChecking] = useState<string | null>(null);
   const [checkError, setCheckError] = useState<string | null>(null);
   const [timer, setTimer] = useState(() => ({ limit: timeLimit, remaining: timeLimit }));
   const timeLeft = timer.limit === timeLimit ? timer.remaining : timeLimit;
-  const [hinted, setHinted] = useState<string | null>(null);
-  const [hintBusy, setHintBusy] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const done = useRef(false);
   const timelineRef = useRef<HTMLDivElement>(null);

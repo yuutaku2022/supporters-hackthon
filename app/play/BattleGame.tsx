@@ -3,9 +3,9 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useLayoutEffect, useState } from 'react';
 import { evaluateAchievement } from '@/DB/achievement';
-import { START_HINTS, TIME_LIMIT } from '@/features/game/rules';
+import { TIME_LIMIT } from '@/features/game/rules';
 import type { PublicPost } from '@/types/game';
-import { ApiError, fetchTimeline, postCheck, postHint, postScore } from './api';
+import { ApiError, fetchTimeline, postCheck, postScore } from './api';
 import { BattleLoading } from './BattleLoading';
 import { BattleScreen } from './BattleScreen';
 
@@ -80,7 +80,6 @@ export function BattleGame() {
     <BattleScreen
       key={attempt}
       posts={posts}
-      hints={hints}
       timeLimit={TIME_LIMIT}
       onCheck={onCheck}
       onFinish={onFinish}

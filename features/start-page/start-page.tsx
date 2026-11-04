@@ -24,7 +24,7 @@ export function StartPage() {
           {WORD_ROWS.map((row, i) => (
             <div key={i} className="overflow-hidden">
               <div
-                className="flex w-max animate-marquee gap-3 motion-reduce:animate-none"
+                className="flex w-max start-marquee gap-3 motion-reduce:animate-none"
                 style={{ animationDuration: `${36 + i * 8}s`, animationDirection: i % 2 ? 'reverse' : 'normal' }}
               >
                 {[...row, ...row].map((word, j) => (
