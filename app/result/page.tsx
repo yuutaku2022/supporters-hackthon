@@ -9,7 +9,7 @@ type ResultRouteProps = {
   searchParams: Promise<{
     score?: string | string[];
     achievement?: string | string[];
-    achievementSaveError?: string | string[];
+    resultId?: string | string[];
   }>;
 };
 
@@ -38,8 +38,8 @@ async function ResultContent({ searchParams }: ResultRouteProps) {
   const score = Number.isSafeInteger(parsedScore) ? parsedScore : 0;
   const achievementParam = Array.isArray(params.achievement) ? params.achievement[0] : params.achievement;
   const achievement = getAchievementById(achievementParam);
-  const saveFailed = params.achievementSaveError === "1" ||
-    (Array.isArray(params.achievementSaveError) && params.achievementSaveError[0] === "1");
+  const resultIdParam = Array.isArray(params.resultId) ? params.resultId[0] : params.resultId;
+  const resultId = resultIdParam && /^[\w-]{1,100}$/.test(resultIdParam) ? resultIdParam : "direct";
 
-  return <ResultPage score={score} achievement={achievement} achievementSaveError={saveFailed} />;
+  return <ResultPage score={score} achievement={achievement} resultId={resultId} />;
 }
