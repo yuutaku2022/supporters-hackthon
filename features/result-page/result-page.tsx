@@ -2,14 +2,18 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import type { AchievementDefinition } from "@/DB/achievement";
 
-const question = "@Grok スコアを教えて";
+const question = "@Grok スコアと称号を教えて";
 const answerPrefix = "あなたのスコアは ";
-const answerSuffix = " 点でした。";
+const answerMiddle = " 点でした。\n獲得称号は「";
+const answerSuffix = "」です。";
 
 type ConversationProps = {
   onReplay: () => void;
   score: number;
+  achievement: AchievementDefinition | null;
+  achievementSaveError: boolean;
 };
 
 function GrokMark({ className = "" }: { className?: string }) {
@@ -30,9 +34,10 @@ function GrokMark({ className = "" }: { className?: string }) {
   );
 }
 
-function Conversation({ onReplay, score }: ConversationProps) {
+function Conversation({ onReplay, score, achievement, achievementSaveError }: ConversationProps) {
   const answerScore = score.toLocaleString("ja-JP");
-  const answer = `${answerPrefix}${answerScore}${answerSuffix}`;
+  const titleText = achievement?.title ?? "なし";
+  const answer = `${answerPrefix}${answerScore}${answerMiddle}${titleText}${answerSuffix}`;
   const [typedQuestion, setTypedQuestion] = useState("");
   const [typedAnswer, setTypedAnswer] = useState("");
   const [stage, setStage] = useState<
@@ -86,12 +91,14 @@ function Conversation({ onReplay, score }: ConversationProps) {
     return () => window.clearTimeout(timer);
   }, [answer]);
 
+  const scoreEnd = answerPrefix.length + answerScore.length;
+  const titleStart = scoreEnd + answerMiddle.length;
+  const titleEnd = titleStart + titleText.length;
   const visiblePrefix = typedAnswer.slice(0, answerPrefix.length);
-  const visibleScore = typedAnswer.slice(
-    answerPrefix.length,
-    answerPrefix.length + answerScore.length,
-  );
-  const visibleSuffix = typedAnswer.slice(answerPrefix.length + answerScore.length);
+  const visibleScore = typedAnswer.slice(answerPrefix.length, scoreEnd);
+  const visibleMiddle = typedAnswer.slice(scoreEnd, titleStart);
+  const visibleTitle = typedAnswer.slice(titleStart, titleEnd);
+  const visibleSuffix = typedAnswer.slice(titleEnd);
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col border-x border-white/10 bg-[#101014] text-white">
@@ -128,6 +135,11 @@ function Conversation({ onReplay, score }: ConversationProps) {
         aria-label="Grokとのチャット結果"
         aria-live="polite"
       >
+        {achievementSaveError && (
+          <p className="rounded-xl border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-sm text-amber-100" role="alert">
+            称号は獲得しましたが、プレイ履歴の保存に失敗しました。
+          </p>
+        )}
         <div className="flex justify-end">
           <div className="max-w-[85%] rounded-[24px] rounded-br-md bg-[#27272d] px-4 py-3 text-[15px] leading-7 text-white">
             {typedQuestion}
@@ -150,11 +162,18 @@ function Conversation({ onReplay, score }: ConversationProps) {
                   <span className="size-1.5 animate-bounce rounded-full bg-white/70 motion-reduce:animate-none" />
                 </div>
               ) : (
-                <p className="m-0 text-[16px] leading-8 text-white/90">
+                <>
+                <p className="m-0 whitespace-pre-wrap text-[16px] leading-8 text-white/90">
                   {visiblePrefix}
                   {visibleScore && (
                     <strong className="font-semibold text-white">
                       {visibleScore}
+                    </strong>
+                  )}
+                  {visibleMiddle}
+                  {visibleTitle && (
+                    <strong className="font-bold text-[#1d9bf0]">
+                      {visibleTitle}
                     </strong>
                   )}
                   {visibleSuffix}
@@ -162,6 +181,14 @@ function Conversation({ onReplay, score }: ConversationProps) {
                     <span className="ml-0.5 inline-block h-5 w-0.5 translate-y-1 animate-pulse bg-white motion-reduce:animate-none" />
                   )}
                 </p>
+                {stage === "done" && achievement && (
+                  <div className="mt-4 rounded-2xl border border-white/15 bg-white/5 px-4 py-3.5" aria-label="獲得した称号">
+                    <span className="text-[11px] font-bold tracking-wider text-white/50 uppercase">獲得称号（実績）</span>
+                    <p className="mt-1 text-lg font-extrabold text-white">「{achievement.title}」</p>
+                    <p className="mt-1 text-xs leading-relaxed text-white/70">{achievement.description}</p>
+                  </div>
+                )}
+                </>
               )}
             </div>
           </div>
@@ -180,7 +207,15 @@ function Conversation({ onReplay, score }: ConversationProps) {
   );
 }
 
-export function ResultPage({ score }: { score: number }) {
+export function ResultPage({
+  score,
+  achievement,
+  achievementSaveError = false,
+}: {
+  score: number;
+  achievement: AchievementDefinition | null;
+  achievementSaveError?: boolean;
+}) {
   const [conversationKey, setConversationKey] = useState(0);
 
   return (
@@ -188,6 +223,8 @@ export function ResultPage({ score }: { score: number }) {
       key={conversationKey}
       onReplay={() => setConversationKey((key) => key + 1)}
       score={score}
+      achievement={achievement}
+      achievementSaveError={achievementSaveError}
     />
   );
 }
