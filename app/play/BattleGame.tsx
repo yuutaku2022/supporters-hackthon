@@ -3,9 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useLayoutEffect, useState } from 'react';
 import { evaluateAchievement } from '@/DB/achievement';
-import { START_HINTS } from '@/features/game/rules';
 import type { PublicPost } from '@/types/game';
-import { ApiError, fetchTimeline, postAchievement, postCheck, postHint, postScore } from './api';
+import { ApiError, fetchTimeline, postAchievement, postCheck, postScore } from './api';
 import { BattleLoading } from './BattleLoading';
 import { BattleScreen } from './BattleScreen';
 
@@ -15,14 +14,13 @@ const RESULT_PATH = '/result';
 /**
  * 1ゲーム分の進行
  * タイムラインをAPIからランダムに取得 → 制限時間内に冷笑を探す → 結果・実績画面へ
- * 当たり判定・採点・ヒントはサーバー（/api/posts/:id/check, /api/score, /api/hint）に任せる。
+ * 当たり判定・採点はサーバー（/api/posts/:id/check, /api/score）に任せる。
  */
 export function BattleGame() {
   const router = useRouter();
   const [attempt, setAttempt] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [posts, setPosts] = useState<PublicPost[] | null>(null);
-  const [hints, setHints] = useState(START_HINTS);
   const [sending, setSending] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
 
@@ -30,7 +28,7 @@ export function BattleGame() {
     const ctrl = new AbortController();
     fetchTimeline(ctrl.signal)
       .then((list) => {
-        if (list.length === 0) throw new ApiError('ポストがまだ登録されていません');
+        if (list.length === 0) throw new ApiError('投稿がまだ登録されていません');
         setPosts(list);
       })
       .catch((e: Error) => {
@@ -43,7 +41,6 @@ export function BattleGame() {
   const reset = () => {
     setPosts(null);
     setLoadError(null);
-    setHints(START_HINTS);
     setSending(false);
     setFinishError(null);
     setAttempt((a) => a + 1);
@@ -84,22 +81,14 @@ export function BattleGame() {
     }
   };
 
-  const onHint = async (pressed: string[]) => {
-    const { postId } = await postHint({ timeline: posts.map((p) => p.id), pressed });
-    if (postId) setHints((h) => Math.max(0, h - 1));
-    return postId ?? null;
-  };
-
   return (
     <BattleScreen
       key={attempt}
       posts={posts}
-      hints={hints}
       onCheck={onCheck}
       onFinish={onFinish}
       sending={sending}
       error={finishError}
-      onHint={onHint}
     />
   );
 }
