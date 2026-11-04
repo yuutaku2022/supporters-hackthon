@@ -233,17 +233,17 @@ function Post({ domId, post, seed, minutesAgo, mark, checking, hinted, disabled,
           <Stat icon={ICONS.reply} value={stats.replies} />
           <Stat icon={ICONS.repost} value={stats.reposts} />
           <Stat icon={ICONS.like} value={stats.likes} />
-          <Stat icon={ICONS.views} value={stats.views} />
+          <Stat icon={ICONS.views} value={stats.views} className="max-[399px]:hidden" />
           {mark ? (
             <span
-              className={`flex min-h-10 items-center gap-1.5 rounded-full border px-4 text-[15px] font-extrabold ${
+              className={`flex min-h-12 shrink-0 items-center gap-1.5 rounded-full border px-5 text-[17px] font-extrabold whitespace-nowrap ${
                 mark === 'hit'
                   ? 'animate-pop border-x-pink bg-x-pink text-white motion-reduce:animate-none'
                   : 'animate-shake border-x-line bg-x-line text-x-text motion-reduce:animate-none'
               }`}
               role="status"
             >
-              {mark === 'hit' ? 'うおっ' : 'ハズレ'}
+              {mark === 'hit' ? 'うおっw' : 'ハズレ'}
             </span>
           ) : (
             <button
@@ -251,7 +251,7 @@ function Post({ domId, post, seed, minutesAgo, mark, checking, hinted, disabled,
               aria-label="冷笑だと思う"
               disabled={disabled}
               onClick={onPress}
-              className="flex min-h-10 cursor-pointer items-center gap-1.5 rounded-full border border-x-line bg-transparent px-4 text-[15px] font-extrabold text-x-sub transition-colors hover:enabled:border-x-pink hover:enabled:text-x-pink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-x-blue disabled:cursor-not-allowed"
+              className="flex min-h-12 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-x-line bg-transparent px-5 text-[17px] font-extrabold whitespace-nowrap text-x-sub transition-colors hover:enabled:border-x-pink hover:enabled:text-x-pink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-x-blue disabled:cursor-not-allowed"
             >
               <IceIcon />
               {checking ? '…' : '冷笑'}
@@ -341,9 +341,9 @@ const ICONS = {
 };
 
 /** アイコン＋数字（飾り） */
-function Stat({ icon, value }: { icon: string; value: string }) {
+function Stat({ icon, value, className = '' }: { icon: string; value: string; className?: string }) {
   return (
-    <span className="flex items-center gap-1" aria-hidden="true">
+    <span className={`flex items-center gap-1 whitespace-nowrap ${className}`} aria-hidden="true">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d={icon} />
       </svg>
@@ -355,7 +355,7 @@ function Stat({ icon, value }: { icon: string; value: string }) {
 /** 冷笑ボタンのアイコン（氷のかけら） */
 function IceIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
       <path d="M12 2v20M4 7l16 10M20 7L4 17M9 3.5L12 6l3-2.5M9 20.5l3-2.5 3 2.5" />
     </svg>
   );
