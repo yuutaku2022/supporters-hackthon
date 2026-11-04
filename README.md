@@ -85,7 +85,10 @@ supporters-hackthon/
 │   └── sounds/                 # 効果音などの静的ファイル
 ├── app/
 │   ├── layout.tsx              # 共通レイアウト（作成済み）
-│   ├── page.tsx                # トップページ（作成済み）
+│   ├── page.tsx                # スタート画面（/）
+│   ├── start/page.tsx          # 旧スタートURLから/へのリダイレクト
+│   ├── play/page.tsx           # ゲーム画面（/play）
+│   ├── result/page.tsx         # 結果画面（/result）
 │   ├── globals.css             # 全体のスタイル（作成済み）
 │   ├── not-found.tsx           # 404ページ（必要になったら追加）
 │   ├── error.tsx               # エラー画面（必要になったら追加）
@@ -116,6 +119,10 @@ supporters-hackthon/
 ├── tsconfig.json
 └── README.md
 ```
+
+### 画面遷移
+
+スタート画面（`/`）からゲーム画面（`/play`）へ進み、ゲーム終了後に結果画面（`/result?score=合計点`）を表示します。結果画面からはスタート画面へ戻れます。
 
 ### 配置のルール
 
