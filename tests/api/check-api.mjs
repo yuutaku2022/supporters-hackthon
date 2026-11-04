@@ -1,77 +1,56 @@
 // APIのレスポンス確認スクリプト
 //   npm run api:check                               → http://localhost:3000/api（npm run dev 中に実行）
 //   npm run api:check -- https://xxx.vercel.app/api → Preview / Production を確認
-// GET {base}/questions を叩き、ステータス・件数・形をチェックする。
-// 答え（cold）や解説（explanation）が漏れていないか、最初の1問で判定APIが返るかも確認する。
+// GET {base}/timeline を叩いて形と件数をチェックし、答え（cold）が漏れていないか確認する。
+// あわせて check / score / hint が返るかも確認する。
 
 const base = (process.argv[2] || 'http://localhost:3000/api').replace(/\/$/, '');
 
-function problemOf(q) {
-  if (typeof q !== 'object' || q === null) return 'オブジェクトではない';
-  if (typeof q.id !== 'string') return 'id が文字列ではない';
-  if (!Array.isArray(q.posts) || q.posts.length === 0) return 'posts が空';
-  if (!q.posts.every((p) => typeof p?.speaker === 'string' && typeof p?.text === 'string')) {
-    return 'posts[].speaker / posts[].text が文字列ではない';
-  }
-  for (const key of ['cold', 'monsterId', 'explanation']) {
-    if (q.posts.some((p) => key in p)) return `答え（${key}）がブラウザに漏れている`;
-  }
-  return null;
-}
-
-async function getJson(url, init) {
+async function call(path, init) {
   const started = Date.now();
-  const res = await fetch(url, { ...init, headers: { Accept: 'application/json', 'Content-Type': 'application/json' } });
+  const res = await fetch(`${base}${path}`, { ...init, headers: { Accept: 'application/json', 'Content-Type': 'application/json' } });
   const ms = Date.now() - started;
   const text = await res.text();
+  let body = null;
   try {
-    return { res, ms, body: JSON.parse(text) };
+    body = JSON.parse(text);
   } catch {
-    return { res, ms, body: null, text };
+    /* JSON ではない */
   }
+  return { res, ms, body, text };
 }
+
+let failed = 0;
+const report = (ok, label, detail) => {
+  if (!ok) failed++;
+  console.log(`${ok ? 'OK' : 'NG'}  ${label}  ${detail}`);
+};
 
 console.log(`API: ${base}\n`);
-let failed = 0;
-let firstQuestion = null;
+try {
+  const t = await call('/timeline');
+  const posts = t.body?.posts;
+  const shapeOk =
+    t.res.ok &&
+    Array.isArray(posts) &&
+    posts.length > 0 &&
+    posts.every((p) => typeof p?.id === 'string' && typeof p?.speaker === 'string' && typeof p?.text === 'string');
+  const leaked = Array.isArray(posts) && posts.some((p) => 'cold' in p || 'monsterId' in p || 'explanation' in p);
+  report(shapeOk && !leaked, 'timeline', `HTTP ${t.res.status}  ${t.ms}ms  ${Array.isArray(posts) ? `${posts.length}件` : t.text.slice(0, 80)}${leaked ? '  答えがブラウザに漏れている' : ''}`);
 
-{
-  const url = `${base}/questions`;
-  try {
-    const { res, ms, body, text } = await getJson(url);
-    if (body === null) {
-      failed++;
-      console.log(`NG  questions  HTTP ${res.status}  ${ms}ms  JSONではない: ${text.slice(0, 80)}`);
-    } else if (!res.ok || !Array.isArray(body.questions) || body.questions.length === 0) {
-      failed++;
-      console.log(`NG  questions  HTTP ${res.status}  ${ms}ms  ${JSON.stringify(body).slice(0, 80)}`);
-    } else {
-      const problems = body.questions.map(problemOf).map((p, i) => (p ? `questions[${i}]: ${p}` : null)).filter(Boolean);
-      if (problems.length) failed++;
-      console.log(`${problems.length ? 'NG' : 'OK'}  questions  HTTP ${res.status}  ${ms}ms  ${body.questions.length}問`);
-      problems.forEach((p) => console.log(`      ${p}`));
-      firstQuestion = body.questions[0];
-    }
-  } catch (e) {
-    failed++;
-    console.log(`NG  questions  接続できません: ${e.cause?.code ?? e.message}`);
-  }
-}
+  if (shapeOk) {
+    const ids = posts.map((p) => p.id);
+    const c = await call(`/posts/${encodeURIComponent(ids[0])}/check`, { method: 'POST' });
+    report(c.res.ok && typeof c.body?.cold === 'boolean', `check ${ids[0]}`, `HTTP ${c.res.status}  ${c.ms}ms  ${JSON.stringify(c.body)}`);
 
-if (firstQuestion) {
-  const url = `${base}/questions/${encodeURIComponent(firstQuestion.id)}/judge`;
-  try {
-    const { res, ms, body } = await getJson(url, {
-      method: 'POST',
-      body: JSON.stringify({ selected: [0], timeLeft: 20, combo: 0 }),
-    });
-    const ok = res.ok && typeof body?.rating === 'string' && Array.isArray(body?.hits) && Array.isArray(body?.coldPosts) && body.coldPosts.length > 0;
-    if (!ok) failed++;
-    console.log(`${ok ? 'OK' : 'NG'}  judge ${firstQuestion.id}  HTTP ${res.status}  ${ms}ms  ${JSON.stringify(body).slice(0, 80)}`);
-  } catch (e) {
-    failed++;
-    console.log(`NG  judge  接続できません: ${e.cause?.code ?? e.message}`);
+    const s = await call('/score', { method: 'POST', body: JSON.stringify({ pressed: ids.slice(0, 3) }) });
+    report(s.res.ok && typeof s.body?.score === 'number', 'score', `HTTP ${s.res.status}  ${s.ms}ms  ${JSON.stringify(s.body)}`);
+
+    const h = await call('/hint', { method: 'POST', body: JSON.stringify({ timeline: ids, pressed: [] }) });
+    report(h.res.ok && 'postId' in (h.body ?? {}), 'hint', `HTTP ${h.res.status}  ${h.ms}ms  ${JSON.stringify(h.body)}`);
   }
+} catch (e) {
+  report(false, 'API', `接続できません: ${e.cause?.code ?? e.message}`);
 }
 
 console.log(failed ? `\n${failed}件 NG` : '\nすべて OK');

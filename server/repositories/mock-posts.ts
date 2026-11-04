@@ -1,12 +1,15 @@
-import type { QuestionRecord } from './questions';
+import type { PostRecord } from './posts';
+
+type MockGroup = { id: string; posts: Omit<PostRecord, 'id'>[] };
 
 /**
- * 問題データのモック（すべて仮のサンプル）
- * 1問＝タイムラインに並ぶポスト数件。冷笑ポストには cold: true とモンスター・解説を付ける。
- * 冷笑の位置が毎回同じにならないように並べる。ふつうのポストにも「笑」「w」を混ぜて、見た目だけで判断できないようにする。
+ * ポストのモック（すべて仮のサンプル、30件）
+ * 話題ごとにまとめて書いているだけで、ゲームではバラバラにしてタイムラインに混ぜる。ポストの id は「話題id-番号」。
+ * 冷笑ポストには cold: true を付ける（モンスター・解説は今は使っていないが、解説画面用に残している）。
+ * ふつうのポストにも「笑」「w」を混ぜて、見た目だけで判断できないようにする。
  * 実在の人物・アカウント名・企業名は使わない。特定の属性を下げる内容にしない。
  */
-export const MOCK_QUESTIONS: QuestionRecord[] = [
+const MOCK_GROUPS: MockGroup[] = [
   // ---- サンプル 1 ----
   {
     id: '1-1',
@@ -170,3 +173,5 @@ export const MOCK_QUESTIONS: QuestionRecord[] = [
     ],
   },
 ];
+
+export const MOCK_POSTS: PostRecord[] = MOCK_GROUPS.flatMap((g) => g.posts.map((p, i) => ({ ...p, id: `${g.id}-${i}` })));
