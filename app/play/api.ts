@@ -1,19 +1,11 @@
-import type {
-  CheckRequest,
-  CheckResponse,
-  HintResponse,
-  JudgeRequest,
-  JudgeResponse,
-  PublicQuestion,
-  QuestionsResponse,
-} from '@/types/game';
+import type { CheckResponse, HintRequest, HintResponse, PublicPost, ScoreResponse, TimelineResponse } from '@/types/game';
 
 /**
  * ブラウザから呼ぶ API（app/api/ の Route Handler）
- *   GET  /api/questions                     1ゲーム分の問題（ランダム）
- *   POST /api/questions/:questionId/check   「冷笑」を押したポスト1件をその場で判定
- *   POST /api/questions/:questionId/judge   問題の終わりにまとめて採点・解説
- *   POST /api/questions/:questionId/hint
+ *   GET  /api/timeline             1ゲーム分のタイムライン（ランダム）
+ *   POST /api/posts/:postId/check  「冷笑」を押したポスト1件をその場で判定
+ *   POST /api/score                時間切れのとき、押したポストからスコアを計算
+ *   POST /api/hint                 まだ押していない冷笑ポストを1つ教える
  */
 export class ApiError extends Error {}
 
@@ -34,42 +26,22 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
-export async function fetchQuestions(signal?: AbortSignal): Promise<PublicQuestion[]> {
-  const url = `/api/questions${location.search}`;
-  const body = await request<QuestionsResponse>(url, { signal });
-  if (!Array.isArray(body.questions)) throw new ApiError('レスポンスに questions 配列がありません');
-  body.questions.forEach((q, i) => {
-    const problem = questionProblem(q);
-    if (problem) throw new ApiError(`questions[${i}] の形が不正です：${problem}`);
-  });
-  return body.questions;
+export async function fetchTimeline(signal?: AbortSignal): Promise<PublicPost[]> {
+  const url = `/api/timeline${location.search}`;
+  const body = await request<TimelineResponse>(url, { signal });
+  if (!Array.isArray(body.posts)) throw new ApiError('レスポンスに posts 配列がありません');
+  const bad = body.posts.findIndex(
+    (p) => typeof p?.id !== 'string' || typeof p?.speaker !== 'string' || typeof p?.text !== 'string',
+  );
+  if (bad >= 0) throw new ApiError(`posts[${bad}] の形が不正です（id / speaker / text が文字列ではない）`);
+  return body.posts;
 }
 
-export const postJudge = (questionId: string, req: JudgeRequest) =>
-  request<JudgeResponse>(`/api/questions/${encodeURIComponent(questionId)}/judge`, {
-    method: 'POST',
-    body: JSON.stringify(req),
-  });
+export const postCheck = (postId: string) =>
+  request<CheckResponse>(`/api/posts/${encodeURIComponent(postId)}/check`, { method: 'POST' });
 
-export const postCheck = (questionId: string, req: CheckRequest) =>
-  request<CheckResponse>(`/api/questions/${encodeURIComponent(questionId)}/check`, {
-    method: 'POST',
-    body: JSON.stringify(req),
-  });
+export const postScore = (pressed: string[]) =>
+  request<ScoreResponse>('/api/score', { method: 'POST', body: JSON.stringify({ pressed }) });
 
-export const postHint =(questionId: string, selected: number[]) =>
-  request<HintResponse>(`/api/questions/${encodeURIComponent(questionId)}/hint`, {
-    method: 'POST',
-    body: JSON.stringify({ selected }),
-  });
-
-function questionProblem(q: unknown): string | null {
-  if (typeof q !== 'object' || q === null) return 'オブジェクトではない';
-  const o = q as Record<string, unknown>;
-  if (typeof o.id !== 'string') return 'id が文字列ではない';
-  if (!Array.isArray(o.posts) || o.posts.length === 0) return 'posts が空';
-  if (!o.posts.every((p) => typeof p?.speaker === 'string' && typeof p?.text === 'string')) {
-    return 'posts[].speaker / posts[].text が文字列ではない';
-  }
-  return null;
-}
+export const postHint = (req: HintRequest) =>
+  request<HintResponse>('/api/hint', { method: 'POST', body: JSON.stringify(req) });
