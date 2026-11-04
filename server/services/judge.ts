@@ -41,6 +41,8 @@ export function judge(question: QuestionRecord, selected: number[], timeLeft: nu
   const multiplier = 1 + Math.max(0, combo - 1) * 0.1;
   const base = hits.length * POINT_PER_HIT + (hits.length > 0 ? time * TIME_BONUS_PER_SEC : 0);
   const points = Math.round(base * multiplier);
+  // TODO: 点数ルールの変更候補（正解ひとつにつき +10点、誤答ひとつにつき -5点）
+  // const points = hits.length * 10 - wrong.length * 5;
 
   const coldPosts: ColdPostReveal[] = question.posts.flatMap((r, index) =>
     r.cold ? [{ index, monsterId: r.monsterId, explanation: r.explanation }] : [],

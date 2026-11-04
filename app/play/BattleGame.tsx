@@ -2,6 +2,8 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { evaluateAchievement } from '@/DB/achievement';
+import { savePlayAchievement } from '@/DB/frontendClient';
 import { START_HINTS } from '@/features/game/rules';
 import type { PublicQuestion } from '@/types/game';
 import { ApiError, fetchQuestions, postCheck, postHint, postJudge } from './api';
@@ -14,6 +16,10 @@ type Run = {
   score: number;
   combo: number;
   hints: number;
+  hits: number;
+  wrong: number;
+  missed: number;
+  timedOut: boolean;
 };
 
 const newRun = (questions: PublicQuestion[]): Run => ({
@@ -22,6 +28,10 @@ const newRun = (questions: PublicQuestion[]): Run => ({
   score: 0,
   combo: 0,
   hints: START_HINTS,
+  hits: 0,
+  wrong: 0,
+  missed: 0,
+  timedOut: false,
 });
 
 /** 全部終わったときに移動する結果画面 */
@@ -67,18 +77,51 @@ export function BattleGame() {
 
   const onCheck = (index: number, found: number[]) => postCheck(q.id, { index, found });
 
-  // 1問終わったら採点して、次のタイムラインへ。最後なら結果画面へ
+  // 1問終わったら採点して、次のタイムラインへ。最後なら実績をDBに保存して結果画面へ
   const onFinish = async (selected: number[], timeLeft: number) => {
     setSending(true);
     setFinishError(null);
     try {
       const r = await postJudge(q.id, { selected, timeLeft, combo: run.combo });
       const score = run.score + r.points;
+      // TODO: 点数ルールの変更候補（正解ひとつにつき +10点、誤答ひとつにつき -5点）
+      // const score = run.score + (r.hits.length * 10 - r.wrong.length * 5);
+      const hits = run.hits + r.hits.length;
+      const wrong = run.wrong + r.wrong.length;
+      const missed = run.missed + r.missed.length;
+      const timedOut = run.timedOut || timeLeft <= 0 || r.missed.length > 0;
+
       if (run.qIndex + 1 >= total) {
-        router.push(`${RESULT_PATH}?score=${score}`);
+        const stats = { score, hits, wrong, missed, timedOut };
+        const evaluated = evaluateAchievement(stats);
+        let achievementId = evaluated.id;
+
+        try {
+          const saved = await savePlayAchievement(stats);
+          achievementId = saved.achievement.id;
+        } catch {
+          // DB保存が失敗しても結果画面への遷移は継続する
+        }
+
+        const params = new URLSearchParams({
+          score: String(score),
+          achievement: achievementId,
+          hits: String(hits),
+          wrong: String(wrong),
+        });
+        router.push(`${RESULT_PATH}?${params.toString()}`);
         return;
       }
-      setRun({ ...run, qIndex: run.qIndex + 1, score, combo: r.combo });
+      setRun({
+        ...run,
+        qIndex: run.qIndex + 1,
+        score,
+        combo: r.combo,
+        hits,
+        wrong,
+        missed,
+        timedOut,
+      });
     } catch (e) {
       setFinishError((e as Error).message);
     } finally {

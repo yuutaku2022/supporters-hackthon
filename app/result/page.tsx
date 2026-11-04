@@ -1,11 +1,15 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { getAchievementById } from "@/DB/achievement";
 import { ResultPage } from "@/features/result-page/result-page";
 
 export const metadata: Metadata = { title: "ゲーム結果 | 冷笑ハンター" };
 
 type ResultRouteProps = {
-  searchParams: Promise<{ score?: string | string[] }>;
+  searchParams: Promise<{
+    score?: string | string[];
+    achievement?: string | string[];
+  }>;
 };
 
 export default function ResultRoute({ searchParams }: ResultRouteProps) {
@@ -23,13 +27,20 @@ export default function ResultRoute({ searchParams }: ResultRouteProps) {
 }
 
 async function ResultContent({ searchParams }: ResultRouteProps) {
-  const scoreParam = (await searchParams).score;
+  const params = await searchParams;
+  const scoreParam = params.score;
   const scoreString = Array.isArray(scoreParam) ? scoreParam[0] : scoreParam;
   const parsedScore =
-    typeof scoreString === "string" && /^\d+$/.test(scoreString)
+    typeof scoreString === "string" && /^-?\d+$/.test(scoreString)
       ? Number(scoreString)
       : 0;
   const score = Number.isSafeInteger(parsedScore) ? parsedScore : 0;
 
-  return <ResultPage score={score} />;
+  const achievementParam = params.achievement;
+  const achievementString = Array.isArray(achievementParam)
+    ? achievementParam[0]
+    : achievementParam;
+  const achievement = getAchievementById(achievementString);
+
+  return <ResultPage score={score} achievement={achievement} />;
 }

@@ -2,14 +2,20 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import {
+  ACHIEVEMENTS,
+  type AchievementDefinition,
+} from "@/DB/achievement";
 
-const question = "@Grok スコアを教えて";
+const question = "@Grok スコアと称号を教えて";
 const answerPrefix = "あなたのスコアは ";
-const answerSuffix = " 点でした。";
+const answerMiddle = " 点でした。\n称号「";
+const answerSuffix = "」を獲得しました！";
 
 type ConversationProps = {
   onReplay: () => void;
   score: number;
+  achievement: AchievementDefinition;
 };
 
 function GrokMark({ className = "" }: { className?: string }) {
@@ -30,9 +36,10 @@ function GrokMark({ className = "" }: { className?: string }) {
   );
 }
 
-function Conversation({ onReplay, score }: ConversationProps) {
+function Conversation({ onReplay, score, achievement }: ConversationProps) {
   const answerScore = score.toLocaleString("ja-JP");
-  const answer = `${answerPrefix}${answerScore}${answerSuffix}`;
+  const titleText = achievement.title;
+  const answer = `${answerPrefix}${answerScore}${answerMiddle}${titleText}${answerSuffix}`;
   const [typedQuestion, setTypedQuestion] = useState("");
   const [typedAnswer, setTypedAnswer] = useState("");
   const [stage, setStage] = useState<
@@ -86,12 +93,15 @@ function Conversation({ onReplay, score }: ConversationProps) {
     return () => window.clearTimeout(timer);
   }, [answer]);
 
+  const scoreEnd = answerPrefix.length + answerScore.length;
+  const middleEnd = scoreEnd + answerMiddle.length;
+  const titleEnd = middleEnd + titleText.length;
+
   const visiblePrefix = typedAnswer.slice(0, answerPrefix.length);
-  const visibleScore = typedAnswer.slice(
-    answerPrefix.length,
-    answerPrefix.length + answerScore.length,
-  );
-  const visibleSuffix = typedAnswer.slice(answerPrefix.length + answerScore.length);
+  const visibleScore = typedAnswer.slice(answerPrefix.length, scoreEnd);
+  const visibleMiddle = typedAnswer.slice(scoreEnd, middleEnd);
+  const visibleTitle = typedAnswer.slice(middleEnd, titleEnd);
+  const visibleSuffix = typedAnswer.slice(titleEnd);
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col border-x border-white/10 bg-[#101014] text-white">
@@ -142,7 +152,7 @@ function Conversation({ onReplay, score }: ConversationProps) {
           stage === "done") && (
           <div className="flex items-start gap-3">
             <GrokMark className="size-8" />
-            <div className="min-w-0 flex-1 pt-1">
+            <div className="min-w-0 flex-1 space-y-4 pt-1">
               {stage === "thinking" ? (
                 <div className="flex h-8 items-center gap-1.5" aria-label="回答を考え中">
                   <span className="size-1.5 animate-bounce rounded-full bg-white/70 [animation-delay:-0.2s] motion-reduce:animate-none" />
@@ -150,18 +160,43 @@ function Conversation({ onReplay, score }: ConversationProps) {
                   <span className="size-1.5 animate-bounce rounded-full bg-white/70 motion-reduce:animate-none" />
                 </div>
               ) : (
-                <p className="m-0 text-[16px] leading-8 text-white/90">
-                  {visiblePrefix}
-                  {visibleScore && (
-                    <strong className="font-semibold text-white">
-                      {visibleScore}
-                    </strong>
+                <>
+                  <p className="m-0 whitespace-pre-wrap text-[16px] leading-8 text-white/90">
+                    {visiblePrefix}
+                    {visibleScore && (
+                      <strong className="font-semibold text-white">
+                        {visibleScore}
+                      </strong>
+                    )}
+                    {visibleMiddle}
+                    {visibleTitle && (
+                      <strong className="font-bold text-[#1d9bf0]">
+                        {visibleTitle}
+                      </strong>
+                    )}
+                    {visibleSuffix}
+                    {stage === "typing-answer" && (
+                      <span className="ml-0.5 inline-block h-5 w-0.5 translate-y-1 animate-pulse bg-white motion-reduce:animate-none" />
+                    )}
+                  </p>
+
+                  {stage === "done" && (
+                    <div
+                      className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3.5"
+                      aria-label="獲得した称号"
+                    >
+                      <span className="text-[11px] font-bold tracking-wider text-white/50 uppercase">
+                        獲得称号（実績）
+                      </span>
+                      <p className="mt-1 text-lg font-extrabold text-white">
+                        「{achievement.title}」
+                      </p>
+                      <p className="mt-1 text-xs leading-relaxed text-white/70">
+                        {achievement.description}
+                      </p>
+                    </div>
                   )}
-                  {visibleSuffix}
-                  {stage === "typing-answer" && (
-                    <span className="ml-0.5 inline-block h-5 w-0.5 translate-y-1 animate-pulse bg-white motion-reduce:animate-none" />
-                  )}
-                </p>
+                </>
               )}
             </div>
           </div>
@@ -180,7 +215,13 @@ function Conversation({ onReplay, score }: ConversationProps) {
   );
 }
 
-export function ResultPage({ score }: { score: number }) {
+export function ResultPage({
+  score,
+  achievement = ACHIEVEMENTS.keep_trying,
+}: {
+  score: number;
+  achievement?: AchievementDefinition;
+}) {
   const [conversationKey, setConversationKey] = useState(0);
 
   return (
@@ -188,6 +229,7 @@ export function ResultPage({ score }: { score: number }) {
       key={conversationKey}
       onReplay={() => setConversationKey((key) => key + 1)}
       score={score}
+      achievement={achievement}
     />
   );
 }
