@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { BackButton } from '@/components/common/BackButton';
 import { XPhone } from '@/app/play/XPhone';
 
-export const metadata: Metadata = { title: '設定 | 冷笑ハンター' };
+export const metadata: Metadata = { title: '設定 | ちょっ，おまw' };
 
 /** 設定画面（仮。中身は未定） */
 export default function SettingsPage() {
