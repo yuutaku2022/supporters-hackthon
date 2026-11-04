@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useLayoutEffect, useState } from 'react';
 import { START_HINTS } from '@/features/game/rules';
+import { BGM, useBgm } from '@/lib/sound';
 import type { PublicPost } from '@/types/game';
 import { ApiError, fetchTimeline, postCheck, postHint, postScore } from './api';
 import { BattleLoading } from './BattleLoading';
@@ -24,6 +25,9 @@ export function BattleGame() {
   const [hints, setHints] = useState(START_HINTS);
   const [sending, setSending] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
+
+  // /play にいる間ずっと BGM を流す（読み込み中・やり直し中も途切れない）。結果画面などへ移ると止まる
+  useBgm(BGM.battle);
 
   useEffect(() => {
     const ctrl = new AbortController();
