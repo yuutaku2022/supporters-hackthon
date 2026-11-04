@@ -113,8 +113,8 @@ export function BattleGame() {
 
   const onHint = async (selected: number[]) => {
     const { index } = await postHint(q.id, selected);
-    if (index !== null) setRun((r) => r && { ...r, hints: Math.max(0, r.hints - 1) });
-    return index;
+    if (index != null) setRun((r) => r && { ...r, hints: Math.max(0, r.hints - 1) });
+    return index ?? null;
   };
 
   const onNext = () => {
