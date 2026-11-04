@@ -26,9 +26,20 @@ body {
 }
 
 /* ===== 冷笑ハンター（features/game）のトークン =====
+ * ゲーム版のポップ配色：bg-game-ink, bg-game-pink など
  * X 風バトル画面：bg-x-bg, text-x-sub, border-x-line など
  */
 @theme {
+  --color-game-ink: #170e33;
+  --color-game-night: #2a1b5c;
+  --color-game-night-2: #3b2a78;
+  --color-game-lilac: #c8bdf0;
+  --color-game-yellow: #ffd23f;
+  --color-game-pink: #ff4f8b;
+  --color-game-sky: #46d2ff;
+  --color-game-green: #7ed957;
+  --color-game-blue-miss: #2e7fd1;
+
   --color-x-bg: #000000;
   --color-x-text: #e7e9ea;
   --color-x-sub: #71767b;
@@ -60,4 +71,9 @@ body {
     0%, 100% { background: transparent; }
     50% { background: rgba(29, 155, 240, 0.35); }
   }
+}
+
+@theme inline {
+  --font-game-display: var(--font-dela-gothic), sans-serif;
+  --font-game-body: var(--font-mplus-rounded), system-ui, sans-serif;
 }

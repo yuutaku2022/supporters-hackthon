@@ -2,22 +2,40 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import type { PublicPost } from '@/types/game';
+import type { CheckResponse, PublicPost, PublicQuestion } from '@/types/game';
 import { scoreOf, TIME_LIMIT } from '@/features/game/rules';
 import { PILL, PILL_DANGER, PILL_PRIMARY } from './styles';
 import { XPhone } from './XPhone';
 
-type Props = {
-  /** タイムラインに並べるポスト */
+/** /play で使っている形：1本の長いタイムライン */
+type TimelineProps = {
   posts: PublicPost[];
   /** 「冷笑」を押したポスト1件をサーバーで判定する（冷笑なら true） */
   onCheck: (postId: string) => Promise<boolean>;
-  /** 時間切れ。押したポストから採点（サーバー）。採点中は sending=true */
-  onFinish: (pressed: string[]) => void;
+  onFinish: (pressed: string[]) => void | Promise<void>;
   sending: boolean;
-  /** 採点 API が失敗したときのメッセージ（「もう一度」で再送できる） */
   error: string | null;
 };
+
+/**
+ * 旧・問題形式（features/game/components/BattleGame.tsx）用。今の画面からは使っていない。
+ * hints / onHint は旧コードとの互換のため受け取るだけで、画面にはヒントを出さない。
+ */
+type QuestionProps = {
+  question: PublicQuestion;
+  qIndex: number;
+  total: number;
+  score: number;
+  combo: number;
+  hints: number;
+  onCheck: (index: number, found: number[]) => Promise<CheckResponse>;
+  onFinish: (selected: number[], timeLeft: number) => void | Promise<void>;
+  sending: boolean;
+  error: string | null;
+  onHint: (selected: number[]) => Promise<number | null>;
+};
+
+type Props = TimelineProps | QuestionProps;
 
 type Mark = 'hit' | 'miss';
 
@@ -27,7 +45,12 @@ type Mark = 'hit' | 'miss';
  * 制限時間内にできるだけ多く見つける。時間切れで終わり。
  * ゲームをやり直すときは key を変えて作り直す前提（状態・タイマーをリセットするため）。
  */
-export function BattleScreen({ posts, onCheck, onFinish, sending, error }: Props) {
+export function BattleScreen(props: Props) {
+  const questionMode = 'question' in props;
+  const posts = questionMode
+    ? props.question.posts.map((post, index) => ({ ...post, id: String(index) }))
+    : props.posts;
+  const { sending, error } = props;
   const [marks, setMarks] = useState<Record<string, Mark>>({});
   const [checking, setChecking] = useState<string | null>(null);
   const [checkError, setCheckError] = useState<string | null>(null);
@@ -45,7 +68,11 @@ export function BattleScreen({ posts, onCheck, onFinish, sending, error }: Props
   const finish = () => {
     if (done.current) return;
     done.current = true;
-    onFinish(pressed);
+    if (questionMode) {
+      void props.onFinish(pressed.map(Number), timeLeft);
+    } else {
+      void props.onFinish(pressed);
+    }
   };
   const retryFinish = () => {
     done.current = false;
@@ -69,7 +96,9 @@ export function BattleScreen({ posts, onCheck, onFinish, sending, error }: Props
     setChecking(postId);
     setCheckError(null);
     try {
-      const cold = await onCheck(postId);
+      const cold = questionMode
+        ? (await props.onCheck(Number(postId), pressed.map(Number))).cold
+        : await props.onCheck(postId);
       setMarks((m) => ({ ...m, [postId]: cold ? 'hit' : 'miss' }));
     } catch {
       setCheckError('判定できませんでした。もう一度押してください');
@@ -90,7 +119,8 @@ export function BattleScreen({ posts, onCheck, onFinish, sending, error }: Props
         <div className="flex min-w-0 grow flex-col">
           <strong className="text-xl font-extrabold">ホーム</strong>
           <span className="truncate text-[13px] text-x-sub tabular-nums" aria-live="polite">
-            {scoreOf(hitCount, missCount).toLocaleString()}pt ・ <span className="text-x-pink">命中 {hitCount}</span> ・ ハズレ {missCount}
+            {(questionMode ? props.score : scoreOf(hitCount, missCount)).toLocaleString()}pt ・{' '}
+            <span className="text-x-pink">命中 {hitCount}</span> ・ ハズレ {missCount}
           </span>
         </div>
         <span

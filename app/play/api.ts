@@ -1,4 +1,5 @@
 import type { CheckResponse, HintRequest, HintResponse, PublicPost, ScoreResponse, TimelineResponse } from '@/types/game';
+import type { AchievementDefinition } from '@/DB/achievement';
 
 /**
  * ブラウザから呼ぶ API（app/api/ の Route Handler）
@@ -40,8 +41,14 @@ export async function fetchTimeline(signal?: AbortSignal): Promise<PublicPost[]>
 export const postCheck = (postId: string) =>
   request<CheckResponse>(`/api/posts/${encodeURIComponent(postId)}/check`, { method: 'POST' });
 
-export const postScore = (pressed: string[]) =>
-  request<ScoreResponse>('/api/score', { method: 'POST', body: JSON.stringify({ pressed }) });
+export const postScore = (pressed: string[], timeline: string[]) =>
+  request<ScoreResponse>('/api/score', { method: 'POST', body: JSON.stringify({ pressed, timeline }) });
 
 export const postHint = (req: HintRequest) =>
   request<HintResponse>('/api/hint', { method: 'POST', body: JSON.stringify(req) });
+
+export const postAchievement = (pressed: string[], timeline: string[]) =>
+  request<{ achievement: AchievementDefinition }>('/api/achievements', {
+    method: 'POST',
+    body: JSON.stringify({ pressed, timeline }),
+  });
