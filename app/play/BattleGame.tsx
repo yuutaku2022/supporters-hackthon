@@ -28,7 +28,7 @@ export function BattleGame() {
     const ctrl = new AbortController();
     fetchTimeline(ctrl.signal)
       .then((list) => {
-        if (list.length === 0) throw new ApiError('ポストがまだ登録されていません');
+        if (list.length === 0) throw new ApiError('投稿がまだ登録されていません');
         setPosts(list);
       })
       .catch((e: Error) => {

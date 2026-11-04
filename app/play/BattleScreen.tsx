@@ -141,7 +141,7 @@ export function BattleScreen(props: Props) {
 
       <div ref={timelineRef} className="grow overflow-y-auto">
         <p className="border-b border-x-line px-4 py-2.5 text-center text-sm text-x-sub">
-          時間内に<strong className="text-x-pink">冷笑しているポスト</strong>をできるだけ見つけよう
+          時間内に<strong className="text-x-pink">冷笑している投稿</strong>をできるだけ見つけよう
         </p>
 
         {posts.map((post, i) => (
