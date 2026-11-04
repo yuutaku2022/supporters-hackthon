@@ -77,3 +77,13 @@ body {
   --font-game-display: var(--font-dela-gothic), sans-serif;
   --font-game-body: var(--font-mplus-rounded), system-ui, sans-serif;
 }
+
+/* スタート画面：冷笑ワードが横に流れ続ける（中身を2回並べて -50% 動かすと切れ目なくループする） */
+@theme {
+  --animate-marquee: marquee 40s linear infinite;
+
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+}

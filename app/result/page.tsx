@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { getAchievementById } from "@/DB/achievement";
 import { ResultPage } from "@/features/result-page/result-page";
 
-export const metadata: Metadata = { title: "ゲーム結果 | 冷笑ハンター" };
+export const metadata: Metadata = { title: "ゲーム結果 | ちょっ，おまw" };
 
 type ResultRouteProps = {
   searchParams: Promise<{
