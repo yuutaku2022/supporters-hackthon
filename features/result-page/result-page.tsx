@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { AchievementDefinition } from "@/DB/achievement";
 
-const question = "@Grok スコアと称号を教えて";
+const question = "＠ちょっ，おまw. スコアと称号を教えて";
 const answerPrefix = "あなたのスコアは ";
 const answerMiddle = " 点でした。\n獲得称号は「";
 const answerSuffix = "」です。";
@@ -31,6 +31,19 @@ function GrokMark({ className = "" }: { className?: string }) {
         />
       </svg>
     </span>
+  );
+}
+
+function XLogo({ className = "size-4" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
   );
 }
 
@@ -99,6 +112,15 @@ function Conversation({ onReplay, score, achievement, achievementSaveError }: Co
   const visibleMiddle = typedAnswer.slice(scoreEnd, titleStart);
   const visibleTitle = typedAnswer.slice(titleStart, titleEnd);
   const visibleSuffix = typedAnswer.slice(titleEnd);
+
+  const handleShareToX = () => {
+    const shareText = `【ちょっ，おまw】\nスコア：${answerScore}点\n獲得称号：「${titleText}」\n#ちょっ，おまw`;
+    const shareUrl = `${window.location.origin}/`;
+    const intentUrl = new URL("https://x.com/intent/post");
+    intentUrl.searchParams.set("text", shareText);
+    intentUrl.searchParams.set("url", shareUrl);
+    window.open(intentUrl.toString(), "_blank", "noopener,noreferrer");
+  };
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col border-x border-white/10 bg-[#101014] text-white">
@@ -195,7 +217,15 @@ function Conversation({ onReplay, score, achievement, achievementSaveError }: Co
         )}
       </section>
 
-      <footer className="shrink-0 border-t border-white/10 px-5 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+      <footer className="flex shrink-0 flex-col gap-3 border-t border-white/10 px-5 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+        <button
+          type="button"
+          onClick={handleShareToX}
+          className="flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-white text-sm font-bold text-black transition-colors hover:bg-white/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none"
+        >
+          <XLogo className="size-4" />
+          <span>Xで結果をポストする</span>
+        </button>
         <Link
           className="flex min-h-12 w-full items-center justify-center rounded-full border border-white/20 text-sm font-semibold text-white/90 transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none"
           href="/"
