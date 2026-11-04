@@ -7,16 +7,20 @@ import { scoreOf, TIME_LIMIT } from '@/features/game/rules';
 import { PILL, PILL_DANGER, PILL_PRIMARY } from './styles';
 import { XPhone } from './XPhone';
 
+/** /play で使っている形：1本の長いタイムライン */
 type TimelineProps = {
   posts: PublicPost[];
-  hints: number;
+  /** 「冷笑」を押したポスト1件をサーバーで判定する（冷笑なら true） */
   onCheck: (postId: string) => Promise<boolean>;
   onFinish: (pressed: string[]) => void | Promise<void>;
   sending: boolean;
   error: string | null;
-  onHint: (pressed: string[]) => Promise<string | null>;
 };
 
+/**
+ * 旧・問題形式（features/game/components/BattleGame.tsx）用。今の画面からは使っていない。
+ * hints / onHint は旧コードとの互換のため受け取るだけで、画面にはヒントを出さない。
+ */
 type QuestionProps = {
   question: PublicQuestion;
   qIndex: number;
@@ -46,15 +50,14 @@ export function BattleScreen(props: Props) {
   const posts = questionMode
     ? props.question.posts.map((post, index) => ({ ...post, id: String(index) }))
     : props.posts;
-  const { hints, sending, error } = props;
+  const { sending, error } = props;
   const [marks, setMarks] = useState<Record<string, Mark>>({});
   const [checking, setChecking] = useState<string | null>(null);
   const [checkError, setCheckError] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
-  const [hinted, setHinted] = useState<string | null>(null);
-  const [hintBusy, setHintBusy] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const done = useRef(false);
+  const timelineRef = useRef<HTMLDivElement>(null);
 
   const pressed = Object.keys(marks);
   const hitCount = pressed.filter((id) => marks[id] === 'hit').length;
@@ -104,37 +107,20 @@ export function BattleScreen(props: Props) {
     }
   };
 
-  const hint = async () => {
-    if (hints <= 0 || hintBusy || busy) return;
-    setHintBusy(true);
-    try {
-      let postId: string | null;
-      if (questionMode) {
-        const index = await props.onHint(pressed.map(Number));
-        postId = index === null ? null : String(index);
-      } else {
-        postId = await props.onHint(pressed);
-      }
-      setHinted(postId);
-      // あやしいポストまでスクロール
-      if (postId) document.getElementById(postDomId(postId))?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    } catch {
-      /* ヒントが取れなくてもバトルは続ける */
-    } finally {
-      setHintBusy(false);
-    }
-  };
+  // 家のマーク：タイムラインの一番上へ
+  const scrollToTop = () => timelineRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
 
   const danger = timeLeft <= 10;
 
   return (
     <XPhone>
-      {/* ヘッダー：画面名・スコア／残り時間 */}
+      {/* ヘッダー：画面名・スコア・命中/ハズレ／残り時間 */}
       <header className="relative flex items-center gap-4 border-b border-x-line bg-black/85 px-4 pt-2.5 pb-3 backdrop-blur-md">
         <div className="flex min-w-0 grow flex-col">
           <strong className="text-xl font-extrabold">ホーム</strong>
-          <span className="truncate text-[13px] text-x-sub">
-            {(questionMode ? props.score : scoreOf(hitCount, missCount)).toLocaleString()}pt
+          <span className="truncate text-[13px] text-x-sub tabular-nums" aria-live="polite">
+            {(questionMode ? props.score : scoreOf(hitCount, missCount)).toLocaleString()}pt ・{' '}
+            <span className="text-x-pink">命中 {hitCount}</span> ・ ハズレ {missCount}
           </span>
         </div>
         <span
@@ -153,21 +139,19 @@ export function BattleScreen(props: Props) {
         </div>
       </header>
 
-      <div className="grow overflow-y-auto">
+      <div ref={timelineRef} className="grow overflow-y-auto">
         <p className="border-b border-x-line px-4 py-2.5 text-center text-sm text-x-sub">
-          時間内に<strong className="text-x-pink">冷笑しているポスト</strong>をできるだけ見つけよう
+          時間内に<strong className="text-x-pink">冷笑している投稿</strong>をできるだけ見つけよう
         </p>
 
         {posts.map((post, i) => (
           <Post
             key={post.id}
-            domId={postDomId(post.id)}
             post={post}
             seed={post.id}
             minutesAgo={(i + 1) * 3}
             mark={marks[post.id]}
             checking={checking === post.id}
-            hinted={hinted === post.id && !marks[post.id]}
             disabled={busy || checking !== null}
             onPress={() => press(post.id)}
           />
@@ -193,23 +177,23 @@ export function BattleScreen(props: Props) {
         </div>
       )}
 
-      {/* 下部：操作バー */}
-      <footer className="flex items-center gap-3 border-t border-x-line bg-x-bg px-4 pt-2.5 pb-[calc(10px+env(safe-area-inset-bottom))]">
-        <button type="button" className={PILL} onClick={hint} disabled={hints <= 0 || hintBusy || busy}>
-          ヒント ×{hints}
+      {/* 下部：操作バー（左：家＝一番上へ ／ 右：一時停止） */}
+      <footer className="flex items-center justify-between gap-3 border-t border-x-line bg-x-bg px-4 pt-2.5 pb-[calc(10px+env(safe-area-inset-bottom))]">
+        <button type="button" className={ICON_BUTTON} onClick={scrollToTop} aria-label="タイムラインの一番上へ">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+            <path d="M3.5 10.5 12 3.5l8.5 7V20a.5.5 0 0 1-.5.5h-5.5v-6h-5v6H4a.5.5 0 0 1-.5-.5z" />
+          </svg>
         </button>
-        <span className="ml-auto text-sm text-x-sub tabular-nums" aria-live="polite">
-          <span className="text-x-pink">命中 {hitCount}</span> ・ ハズレ {missCount}
-        </span>
         <button
           type="button"
-          className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-full text-x-text hover:bg-x-text/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-x-blue"
+          className={ICON_BUTTON}
           onClick={() => setMenuOpen(true)}
-          aria-label="メニュー（一時停止）"
+          aria-label="一時停止"
           aria-haspopup="dialog"
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
-            <path d="M4 6h16M4 12h16M4 18h16" />
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <rect x="6" y="4.5" width="4" height="15" rx="1" />
+            <rect x="14" y="4.5" width="4" height="15" rx="1" />
           </svg>
         </button>
       </footer>
@@ -219,31 +203,29 @@ export function BattleScreen(props: Props) {
   );
 }
 
-const postDomId = (postId: string) => `post-${postId}`;
+/** 下のバーの丸いアイコンボタン */
+const ICON_BUTTON =
+  'grid size-11 shrink-0 cursor-pointer place-items-center rounded-full text-x-text hover:bg-x-text/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-x-blue';
 
 type PostProps = {
-  /** ヒントでスクロールするときの目印 */
-  domId: string;
   post: PublicPost;
   seed: string;
   minutesAgo: number;
   mark: Mark | undefined;
   checking: boolean;
-  hinted: boolean;
   disabled: boolean;
   onPress: () => void;
 };
 
 /** タイムラインのポスト1件。アクションバーの右端が「冷笑」ボタン（押すとその場で判定、取り消しはできない） */
-function Post({ domId, post, seed, minutesAgo, mark, checking, hinted, disabled, onPress }: PostProps) {
+function Post({ post, seed, minutesAgo, mark, checking, disabled, onPress }: PostProps) {
   const name = displayName(post.speaker);
   const stats = fakeStats(seed);
   return (
     <article
-      id={domId}
       className={`flex gap-2.5 border-b border-x-line px-4 py-3 transition-colors ${
         mark === 'hit' ? 'bg-x-pink/10 shadow-[inset_3px_0_0_var(--color-x-pink)]' : mark === 'miss' ? 'opacity-50' : ''
-      } ${hinted ? 'animate-x-hint shadow-[inset_3px_0_0_var(--color-x-blue)] motion-reduce:animate-none motion-reduce:bg-x-blue/35' : ''}`}
+      }`}
     >
       <Avatar seed={post.speaker} letter={name} />
       <div className="min-w-0 grow">
@@ -252,9 +234,6 @@ function Post({ domId, post, seed, minutesAgo, mark, checking, hinted, disabled,
           <span className="truncate text-x-sub">
             {post.speaker} ・ {minutesAgo}分
           </span>
-          {hinted && (
-            <span className="ml-auto shrink-0 rounded-full bg-x-blue px-2 py-px text-xs font-extrabold text-white">あやしい</span>
-          )}
         </div>
         <p className="mt-0.5 leading-relaxed wrap-anywhere whitespace-pre-wrap">{post.text}</p>
 
@@ -263,17 +242,17 @@ function Post({ domId, post, seed, minutesAgo, mark, checking, hinted, disabled,
           <Stat icon={ICONS.reply} value={stats.replies} />
           <Stat icon={ICONS.repost} value={stats.reposts} />
           <Stat icon={ICONS.like} value={stats.likes} />
-          <Stat icon={ICONS.views} value={stats.views} />
+          <Stat icon={ICONS.views} value={stats.views} className="max-[399px]:hidden" />
           {mark ? (
             <span
-              className={`flex min-h-8 items-center gap-1 rounded-full border px-2.5 text-[13px] font-extrabold ${
+              className={`flex min-h-12 shrink-0 items-center gap-1.5 rounded-full border px-5 text-[17px] font-extrabold whitespace-nowrap ${
                 mark === 'hit'
                   ? 'animate-pop border-x-pink bg-x-pink text-white motion-reduce:animate-none'
                   : 'animate-shake border-x-line bg-x-line text-x-text motion-reduce:animate-none'
               }`}
               role="status"
             >
-              {mark === 'hit' ? '撃破！' : 'ハズレ'}
+              {mark === 'hit' ? 'うおっw' : 'ハズレ'}
             </span>
           ) : (
             <button
@@ -281,7 +260,7 @@ function Post({ domId, post, seed, minutesAgo, mark, checking, hinted, disabled,
               aria-label="冷笑だと思う"
               disabled={disabled}
               onClick={onPress}
-              className="flex min-h-8 cursor-pointer items-center gap-1 rounded-full border border-x-line bg-transparent px-2.5 text-[13px] font-extrabold text-x-sub transition-colors hover:enabled:border-x-pink hover:enabled:text-x-pink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-x-blue disabled:cursor-not-allowed"
+              className="flex min-h-12 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-x-line bg-transparent px-5 text-[17px] font-extrabold whitespace-nowrap text-x-sub transition-colors hover:enabled:border-x-pink hover:enabled:text-x-pink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-x-blue disabled:cursor-not-allowed"
             >
               <IceIcon />
               {checking ? '…' : '冷笑'}
@@ -371,9 +350,9 @@ const ICONS = {
 };
 
 /** アイコン＋数字（飾り） */
-function Stat({ icon, value }: { icon: string; value: string }) {
+function Stat({ icon, value, className = '' }: { icon: string; value: string; className?: string }) {
   return (
-    <span className="flex items-center gap-1" aria-hidden="true">
+    <span className={`flex items-center gap-1 whitespace-nowrap ${className}`} aria-hidden="true">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d={icon} />
       </svg>
@@ -385,7 +364,7 @@ function Stat({ icon, value }: { icon: string; value: string }) {
 /** 冷笑ボタンのアイコン（氷のかけら） */
 function IceIcon() {
   return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
       <path d="M12 2v20M4 7l16 10M20 7L4 17M9 3.5L12 6l3-2.5M9 20.5l3-2.5 3 2.5" />
     </svg>
   );
