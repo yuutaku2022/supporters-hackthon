@@ -1,5 +1,4 @@
 import type { CheckResponse, HintRequest, HintResponse, PublicPost, ScoreResponse, TimelineResponse } from '@/types/game';
-import type { AchievementDefinition } from '@/DB/achievement';
 
 /**
  * ブラウザから呼ぶ API（app/api/ の Route Handler）
@@ -46,9 +45,3 @@ export const postScore = (pressed: string[], timeline: string[]) =>
 
 export const postHint = (req: HintRequest) =>
   request<HintResponse>('/api/hint', { method: 'POST', body: JSON.stringify(req) });
-
-export const postAchievement = (pressed: string[], timeline: string[]) =>
-  request<{ achievement: AchievementDefinition }>('/api/achievements', {
-    method: 'POST',
-    body: JSON.stringify({ pressed, timeline }),
-  });
