@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import type { PublicPost } from '@/types/game';
 import { scoreOf, TIME_LIMIT } from '@/features/game/rules';
+import { MISS_SE, playRandomPressSe, playSe, preloadPressSes } from '@/lib/sound';
+import { SeSettings } from '@/components/common/SeSettings';
 import { PILL, PILL_DANGER, PILL_PRIMARY } from './styles';
 import { XPhone } from './XPhone';
 
@@ -56,6 +58,8 @@ export function BattleScreen({ posts, hints, onCheck, onFinish, sending, error, 
     finish();
   };
 
+  useEffect(preloadPressSes, []);
+
   // タイマー。採点待ち・メニューを開いている間は止める
   useEffect(() => {
     if (sending || menuOpen) return;
@@ -74,6 +78,9 @@ export function BattleScreen({ posts, hints, onCheck, onFinish, sending, error, 
     setCheckError(null);
     try {
       const cold = await onCheck(postId);
+      // 当たりは選ばれた声の中からランダム、ハズレはブザー
+      if (cold) playRandomPressSe();
+      else playSe(MISS_SE);
       setMarks((m) => ({ ...m, [postId]: cold ? 'hit' : 'miss' }));
     } catch {
       setCheckError('判定できませんでした。もう一度押してください');
@@ -265,6 +272,7 @@ function Post({ domId, post, seed, minutesAgo, mark, checking, hinted, disabled,
 
 /** 一時停止メニュー（開いている間はタイマーが止まる） */
 function PauseMenu({ onClose }: { onClose: () => void }) {
+  const [soundOpen, setSoundOpen] = useState(false);
   return (
     <div
       className="absolute inset-0 z-10 flex items-end bg-[rgba(91,112,131,0.4)]"
@@ -274,12 +282,30 @@ function PauseMenu({ onClose }: { onClose: () => void }) {
       onClick={onClose}
       onKeyDown={(e) => e.key === 'Escape' && onClose()}
     >
-      <div className="w-full rounded-t-2xl bg-x-bg px-4 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="max-h-full w-full overflow-y-auto rounded-t-2xl bg-x-bg px-4 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]"
+        onClick={(e) => e.stopPropagation()}
+      >
         <p className="mb-3 text-center text-lg font-extrabold">一時停止中</p>
         <div className="flex flex-col gap-2.5">
           <button type="button" className={`${PILL_PRIMARY} min-h-11`} onClick={onClose} autoFocus>
             バトルにもどる
           </button>
+          {/* バトルを続けたまま効果音を変えられるように、メニューの中で開く */}
+          <button
+            type="button"
+            className={`${PILL} min-h-11`}
+            onClick={() => setSoundOpen((o) => !o)}
+            aria-expanded={soundOpen}
+            aria-controls="pause-se-settings"
+          >
+            効果音 {soundOpen ? '▲' : '▼'}
+          </button>
+          {soundOpen && (
+            <div id="pause-se-settings" className="py-1">
+              <SeSettings />
+            </div>
+          )}
           <Link href="/settings" className={`${PILL} flex min-h-11 items-center justify-center`}>
             設定
           </Link>
