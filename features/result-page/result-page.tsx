@@ -13,7 +13,6 @@ type ConversationProps = {
   onReplay: () => void;
   score: number;
   achievement: AchievementDefinition | null;
-  achievementSaveError: boolean;
 };
 
 function GrokMark({ className = "" }: { className?: string }) {
@@ -34,7 +33,7 @@ function GrokMark({ className = "" }: { className?: string }) {
   );
 }
 
-function Conversation({ onReplay, score, achievement, achievementSaveError }: ConversationProps) {
+function Conversation({ onReplay, score, achievement }: ConversationProps) {
   const answerScore = score.toLocaleString("ja-JP");
   const titleText = achievement?.title ?? "なし";
   const answer = `${answerPrefix}${answerScore}${answerMiddle}${titleText}${answerSuffix}`;
@@ -135,11 +134,6 @@ function Conversation({ onReplay, score, achievement, achievementSaveError }: Co
         aria-label="Grokとのチャット結果"
         aria-live="polite"
       >
-        {achievementSaveError && (
-          <p className="rounded-xl border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-sm text-amber-100" role="alert">
-            称号は獲得しましたが、プレイ履歴の保存に失敗しました。
-          </p>
-        )}
         <div className="flex justify-end">
           <div className="max-w-[85%] rounded-[24px] rounded-br-md bg-[#27272d] px-4 py-3 text-[15px] leading-7 text-white">
             {typedQuestion}
@@ -210,21 +204,20 @@ function Conversation({ onReplay, score, achievement, achievementSaveError }: Co
 export function ResultPage({
   score,
   achievement,
-  achievementSaveError = false,
+  resultId,
 }: {
   score: number;
   achievement: AchievementDefinition | null;
-  achievementSaveError?: boolean;
+  resultId: string;
 }) {
   const [conversationKey, setConversationKey] = useState(0);
 
   return (
     <Conversation
-      key={conversationKey}
+      key={`${resultId}-${score}-${achievement?.id ?? "none"}-${conversationKey}`}
       onReplay={() => setConversationKey((key) => key + 1)}
       score={score}
       achievement={achievement}
-      achievementSaveError={achievementSaveError}
     />
   );
 }

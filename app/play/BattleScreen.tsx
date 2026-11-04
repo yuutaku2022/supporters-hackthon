@@ -3,13 +3,14 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import type { CheckResponse, PublicPost, PublicQuestion } from '@/types/game';
-import { scoreOf, TIME_LIMIT } from '@/features/game/rules';
+import { scoreOf } from '@/features/game/rules';
 import { PILL, PILL_DANGER, PILL_PRIMARY } from './styles';
 import { XPhone } from './XPhone';
 
 type TimelineProps = {
   posts: PublicPost[];
   hints: number;
+  timeLimit: number;
   onCheck: (postId: string) => Promise<boolean>;
   onFinish: (pressed: string[]) => void | Promise<void>;
   sending: boolean;
@@ -24,6 +25,7 @@ type QuestionProps = {
   score: number;
   combo: number;
   hints: number;
+  timeLimit: number;
   onCheck: (index: number, found: number[]) => Promise<CheckResponse>;
   onFinish: (selected: number[], timeLeft: number) => void | Promise<void>;
   sending: boolean;
@@ -46,11 +48,12 @@ export function BattleScreen(props: Props) {
   const posts = questionMode
     ? props.question.posts.map((post, index) => ({ ...post, id: String(index) }))
     : props.posts;
-  const { hints, sending, error } = props;
+  const { hints, sending, error, timeLimit } = props;
   const [marks, setMarks] = useState<Record<string, Mark>>({});
   const [checking, setChecking] = useState<string | null>(null);
   const [checkError, setCheckError] = useState<string | null>(null);
-  const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
+  const [timer, setTimer] = useState(() => ({ limit: timeLimit, remaining: timeLimit }));
+  const timeLeft = timer.limit === timeLimit ? timer.remaining : timeLimit;
   const [hinted, setHinted] = useState<string | null>(null);
   const [hintBusy, setHintBusy] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -79,9 +82,14 @@ export function BattleScreen(props: Props) {
   // タイマー。採点待ち・メニューを開いている間は止める
   useEffect(() => {
     if (sending || menuOpen) return;
-    const id = window.setInterval(() => setTimeLeft((t) => Math.max(0, t - 1)), 1000);
+    const id = window.setInterval(() => {
+      setTimer((current) => {
+        const remaining = current.limit === timeLimit ? current.remaining : timeLimit;
+        return { limit: timeLimit, remaining: Math.max(0, remaining - 1) };
+      });
+    }, 1000);
     return () => window.clearInterval(id);
-  }, [sending, menuOpen]);
+  }, [sending, menuOpen, timeLimit]);
   // 0秒になったら、それまでに押したポストで採点
   useEffect(() => {
     if (timeUp) finish();
@@ -148,7 +156,7 @@ export function BattleScreen(props: Props) {
         <div className="absolute inset-x-0 -bottom-px h-[3px]" aria-hidden="true">
           <div
             className={`h-full transition-[width] duration-1000 ease-linear ${danger ? 'bg-x-danger' : 'bg-x-blue'}`}
-            style={{ width: `${(timeLeft / TIME_LIMIT) * 100}%` }}
+            style={{ width: `${timeLimit > 0 ? (timeLeft / timeLimit) * 100 : 0}%` }}
           />
         </div>
       </header>
