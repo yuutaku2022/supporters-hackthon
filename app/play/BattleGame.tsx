@@ -2,8 +2,9 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useLayoutEffect, useState } from 'react';
+import { evaluateAchievement } from '@/DB/achievement';
 import type { PublicPost } from '@/types/game';
-import { ApiError, fetchTimeline, postCheck, postScore } from './api';
+import { ApiError, fetchTimeline, postAchievement, postCheck, postScore } from './api';
 import { BattleLoading } from './BattleLoading';
 import { BattleScreen } from './BattleScreen';
 
@@ -12,7 +13,7 @@ const RESULT_PATH = '/result';
 
 /**
  * 1ゲーム分の進行
- * タイムラインをAPIからランダムに取得 → 制限時間内に冷笑を探す → 結果画面（/result?score=合計点）へ
+ * タイムラインをAPIからランダムに取得 → 制限時間内に冷笑を探す → 結果・実績画面へ
  * 当たり判定・採点はサーバー（/api/posts/:id/check, /api/score）に任せる。
  */
 export function BattleGame() {
@@ -58,8 +59,22 @@ export function BattleGame() {
     setSending(true);
     setFinishError(null);
     try {
-      const r = await postScore(pressed);
-      router.push(`${RESULT_PATH}?score=${r.score}`);
+      const r = await postScore(pressed, posts.map((post) => post.id));
+      const stats = { score: r.score, hits: r.hits, wrong: r.wrong, missed: r.missed, timedOut: true };
+      const achievement = evaluateAchievement(stats);
+      let saveFailed = false;
+      try {
+        await postAchievement(pressed, posts.map((post) => post.id));
+      } catch {
+        saveFailed = true;
+      }
+
+      const params = new URLSearchParams({
+        score: String(r.score),
+        achievement: achievement.id,
+      });
+      if (saveFailed) params.set('achievementSaveError', '1');
+      router.push(`${RESULT_PATH}?${params.toString()}`);
     } catch (e) {
       setFinishError((e as Error).message);
       setSending(false);
