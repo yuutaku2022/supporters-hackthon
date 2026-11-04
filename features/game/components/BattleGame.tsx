@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { JudgeResponse, PublicQuestion } from '@/types/game';
 import { ApiError, fetchQuestions, postCheck, postHint, postJudge } from '../api';
-import { START_HINTS } from '../rules';
+import { START_HINTS, TIME_LIMIT } from '../rules';
 import type { GameResult } from '../result';
 import { loadSave, writeSave } from '../save';
 import { BattleLoading } from '@/app/play/BattleLoading';
@@ -164,6 +164,7 @@ export function BattleGame() {
           score={run.score}
           combo={run.combo}
           hints={run.hints}
+          timeLimit={TIME_LIMIT}
           onCheck={onCheck}
           onFinish={onFinish}
           sending={sending}
