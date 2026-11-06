@@ -411,7 +411,8 @@ function PauseMenu({ onClose }: { onClose: () => void }) {
           <Link href="/" className={`${PILL_DANGER} flex min-h-11 items-center justify-center`}>
             ゲームをやめる
           </Link>
- 
+        </div>
+
         <p className="mt-3 text-center text-xs text-x-sub">やめるを選ぶと、このバトルの進行は消えます</p>
       </div>
     </div>
