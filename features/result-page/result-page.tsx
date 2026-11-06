@@ -218,7 +218,7 @@ function Conversation({ onReplay, score, achievement }: ConversationProps) {
           className="flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-white text-sm font-bold text-black transition-colors hover:bg-white/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none"
         >
           <XLogo className="size-4" />
-          <span>Xで結果をポストする</span>
+          <span>結果をポストする</span>
         </button>
         <Link
           className="flex min-h-12 w-full items-center justify-center rounded-full border border-white/20 text-sm font-semibold text-white/90 transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none"
