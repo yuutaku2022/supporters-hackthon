@@ -43,7 +43,7 @@ const newRun = (questions: PublicQuestion[]): Run => ({
 
 /**
  * 1ゲーム分の進行
- * 問題をAPIからランダムに取得 → バトル ⇄ 撃破・解説 → ゲーム終了画面（GameResult を渡す）
+ * 問題をAPIからランダムに取得 → ゲーム ⇄ 撃破・解説 → ゲーム終了画面（GameResult を渡す）
  * 正解判定・ヒントはサーバー（/api/questions/:id/check, /judge, /hint）に任せる。
  */
 export function BattleGame() {

@@ -122,7 +122,7 @@ function Conversation({ onReplay, score, achievement }: ConversationProps) {
   };
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col border-x border-white/10 bg-[#101014] text-white">
+    <main className="mx-auto flex min-h-dvh w-full max-w-[440px] flex-col border-x border-white/10 bg-[#101014] pt-[env(safe-area-inset-top)] text-white">
       <header className="flex h-16 shrink-0 items-center justify-between border-b border-white/10 px-5">
         <div className="flex items-center gap-3">
           <GrokMark />
