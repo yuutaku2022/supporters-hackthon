@@ -122,7 +122,7 @@ function Conversation({ onReplay, score, achievement }: ConversationProps) {
   };
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col border-x border-white/10 bg-[#101014] text-white">
+    <main className="mx-auto flex min-h-dvh w-full max-w-[440px] flex-col border-x border-white/10 bg-[#101014] pt-[env(safe-area-inset-top)] text-white">
       <header className="flex h-16 shrink-0 items-center justify-between border-b border-white/10 px-5">
         <div className="flex items-center gap-3">
           <GrokMark />
@@ -218,7 +218,7 @@ function Conversation({ onReplay, score, achievement }: ConversationProps) {
           className="flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-white text-sm font-bold text-black transition-colors hover:bg-white/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none"
         >
           <XLogo className="size-4" />
-          <span>Xで結果をポストする</span>
+          <span>結果をポストする</span>
         </button>
         <Link
           className="flex min-h-12 w-full items-center justify-center rounded-full border border-white/20 text-sm font-semibold text-white/90 transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none"

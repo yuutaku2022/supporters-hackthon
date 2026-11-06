@@ -27,7 +27,7 @@ body {
 
 /* ===== 冷笑ハンター（features/game）のトークン =====
  * ゲーム版のポップ配色：bg-game-ink, bg-game-pink など
- * X 風バトル画面：bg-x-bg, text-x-sub, border-x-line など
+ * X 風ゲーム画面：bg-x-bg, text-x-sub, border-x-line など
  */
 @theme {
   --color-game-ink: #170e33;
