@@ -1,11 +1,16 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { getAchievementById } from "@/DB/achievement";
 import { ResultPage } from "@/features/result-page/result-page";
 
-export const metadata: Metadata = { title: "ゲーム結果 | 冷笑ハンター" };
+export const metadata: Metadata = { title: "ゲーム結果 | ちょっ，おまw" };
 
 type ResultRouteProps = {
-  searchParams: Promise<{ score?: string | string[] }>;
+  searchParams: Promise<{
+    score?: string | string[];
+    achievement?: string | string[];
+    resultId?: string | string[];
+  }>;
 };
 
 export default function ResultRoute({ searchParams }: ResultRouteProps) {
@@ -23,13 +28,18 @@ export default function ResultRoute({ searchParams }: ResultRouteProps) {
 }
 
 async function ResultContent({ searchParams }: ResultRouteProps) {
-  const scoreParam = (await searchParams).score;
+  const params = await searchParams;
+  const scoreParam = params.score;
   const scoreString = Array.isArray(scoreParam) ? scoreParam[0] : scoreParam;
   const parsedScore =
     typeof scoreString === "string" && /^\d+$/.test(scoreString)
       ? Number(scoreString)
       : 0;
   const score = Number.isSafeInteger(parsedScore) ? parsedScore : 0;
+  const achievementParam = Array.isArray(params.achievement) ? params.achievement[0] : params.achievement;
+  const achievement = getAchievementById(achievementParam);
+  const resultIdParam = Array.isArray(params.resultId) ? params.resultId[0] : params.resultId;
+  const resultId = resultIdParam && /^[\w-]{1,100}$/.test(resultIdParam) ? resultIdParam : "direct";
 
-  return <ResultPage score={score} />;
+  return <ResultPage score={score} achievement={achievement} resultId={resultId} />;
 }

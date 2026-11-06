@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { BattleGame } from './BattleGame';
 
-export const metadata: Metadata = { title: '冷笑ハンター' };
+export const metadata: Metadata = { title: 'ちょっ，おまw' };
 
 /** バトル画面：/play */
 export default function PlayPage() {

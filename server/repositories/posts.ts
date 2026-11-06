@@ -1,7 +1,7 @@
 import 'server-only';
 import { connection } from 'next/server';
 import type { CommentRecord } from '@/DB/comment';
-import { getComments } from '@/DB/commentRepository';
+import { getComments, getCommentsByIds } from '@/DB/commentRepository';
 import { MOCK_POSTS } from './mock-posts';
 
 /**
@@ -14,7 +14,7 @@ import { MOCK_POSTS } from './mock-posts';
  * DB には投稿者名が無いので、speaker は id から作った仮の @ハンドル。
  */
 
-/** ポスト1件（cold=true が冷笑ポスト。ブラウザに直接返さない） */
+/** ポスト1件（cold=true が冷笑ポスト） */
 export type PostRecord = {
   id: string;
   /** 投稿者の @ハンドル */
@@ -26,21 +26,45 @@ export type PostRecord = {
   explanation?: string;
 };
 
-/** ポストをランダムに count 件返す（件数が足りなければあるだけ） */
-export async function findRandomPosts(count: number): Promise<PostRecord[]> {
+/** ゲーム開始時に全投稿をランダムな順序で返す */
+export async function findRandomPosts(): Promise<PostRecord[]> {
   await connection(); // リクエストごとに違う結果を返すので、ビルド時に固定しない
-  if (!hasDatabase()) return shuffle(MOCK_POSTS).slice(0, count);
-  const comments = await getComments({ random: true, limit: count });
-  return comments.map(toPost);
+  const posts: PostRecord[] = [];
+
+  if (!hasDatabase()) {
+    posts.push(...MOCK_POSTS);
+  } else {
+    const pageSize = 1000;
+    for (let offset = 0; ; offset += pageSize) {
+      const comments = await getComments({ limit: pageSize, offset });
+      posts.push(...comments.map(toPost));
+      if (comments.length < pageSize) break;
+    }
+  }
+
+  return shuffle(posts);
 }
 
 /** id で指定したポストを返す（見つからない id は含めない） */
 export async function findPostsByIds(ids: string[]): Promise<PostRecord[]> {
   const set = new Set(ids);
-  if (!hasDatabase()) return MOCK_POSTS.filter((p) => set.has(p.id));
-  // comments は100件ほどなので全件取って絞る。件数が増えたら DB 側で id 指定の検索にする
-  const comments = await getComments();
-  return comments.map(toPost).filter((p) => set.has(p.id));
+  const posts = !hasDatabase()
+    ? MOCK_POSTS.filter((post) => set.has(post.id))
+    : (await getCommentsByIds(ids)).map(toPost);
+  const postsById = new Map(posts.map((post) => [post.id, post]));
+  return ids.flatMap((id) => {
+    const post = postsById.get(id);
+    return post ? [post] : [];
+  });
+}
+
+function shuffle<T>(items: T[]): T[] {
+  const shuffled = [...items];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
 }
 
 const hasDatabase = () =>
@@ -61,13 +85,4 @@ function handleFor(id: string): string {
   let h = 0;
   for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0;
   return `@${HANDLE_WORDS[h % HANDLE_WORDS.length]}_${id}`;
-}
-
-function shuffle<T>(list: T[]): T[] {
-  const a = [...list];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
 }
