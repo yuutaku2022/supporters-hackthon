@@ -4,7 +4,7 @@ import { useEffect, useSyncExternalStore } from 'react';
 
 /** 音声ファイルの場所（public/sounds 以下） */
 export const BGM = {
-  battle: '/sounds/bgm/buoyant-game-loop.m4a',
+  battle: '/sounds/bgm/buoyant-game-loop.mp3',
 } as const;
 
 /** 冷笑ボタンがハズレだったときのブザー */
@@ -85,6 +85,7 @@ export function preloadPressSes() {
 }
 
 const seCache = new Map<string, HTMLAudioElement>();
+const activeSes = new Set<HTMLAudioElement>();
 
 /** SE を先に読み込んでおく（初回の再生が遅れないように） */
 export function preloadSe(src: string) {
@@ -97,10 +98,15 @@ export function preloadSe(src: string) {
 /** SE を1回鳴らす。連打しても前の音を切らずに重ねて鳴る */
 export function playSe(src: string, volume = 0.8) {
   preloadSe(src);
-  const audio = seCache.get(src)!.cloneNode() as HTMLAudioElement;
+  const audio = new Audio(src);
   audio.volume = volume;
-  audio.play().catch(() => {
-    /* 再生できなくてもゲームは続ける */
+  const release = () => activeSes.delete(audio);
+  activeSes.add(audio);
+  audio.addEventListener('ended', release, { once: true });
+  audio.addEventListener('error', release, { once: true });
+  audio.play().catch((error: unknown) => {
+    release();
+    console.warn(`効果音を再生できませんでした: ${src}`, error);
   });
 }
 

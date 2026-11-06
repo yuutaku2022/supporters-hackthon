@@ -139,7 +139,11 @@ export function BattleScreen(props: Props) {
     if (marks[postId] || checking !== null || busy) return;
     if (!('question' in props)) {
       const post = props.posts.find((item) => item.id === postId);
-      if (post) setMarks((m) => ({ ...m, [postId]: post.cold ? 'hit' : 'miss' }));
+      if (post) {
+        if (post.cold) playRandomPressSe();
+        else playSe(MISS_SE);
+        setMarks((m) => ({ ...m, [postId]: post.cold ? 'hit' : 'miss' }));
+      }
       return;
     }
 
