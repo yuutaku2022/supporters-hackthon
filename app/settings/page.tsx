@@ -3,7 +3,7 @@ import { BackButton } from '@/components/common/BackButton';
 import { XPhone } from '@/app/play/XPhone';
 import { SeSettings } from '@/components/common/SeSettings';
 
-export const metadata: Metadata = { title: '設定 | 冷笑ハンター' };
+export const metadata: Metadata = { title: '設定 | ちょっ，おまw' };
 
 /** 設定画面 */
 export default function SettingsPage() {
