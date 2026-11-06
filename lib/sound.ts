@@ -12,13 +12,12 @@ export const MISS_SE = '/sounds/se/buzzer.mp3';
 
 /** 冷笑ボタンが当たりだったときに鳴る SE の候補。ここに足せば設定画面にも並ぶ */
 export const PRESS_SES = [
-  { id: 'uuo', label: 'ううお', voice: '四国めたん', src: '/sounds/se/uuo.wav' },
-  { id: 'uo', label: 'うお', voice: '麒ヶ島宗麟', src: '/sounds/se/uo.wav' },
-  { id: 'kusa', label: 'くさ', voice: '白上虎太郎', src: '/sounds/se/kusa.wav' },
-  { id: 'kakkee', label: 'かっけえ', voice: '白上虎太郎', src: '/sounds/se/kakkee.wav' },
-  { id: 'cho-oma', label: 'ちょ，おま', voice: '麒ヶ島宗麟', src: '/sounds/se/cho-oma.wav' },
-  { id: 'kukanannyo', label: 'くかなんよ', voice: '麒ヶ島宗麟', src: '/sounds/se/kukanannyo.wav' },
-  { id: 'daruite', label: 'だるいて', voice: '麒ヶ島宗麟', src: '/sounds/se/daruite.wav' },
+  { id: 'uo', label: 'うお', voice: '玄野武宏', src: '/sounds/se/玄野武宏_うお.wav' },
+  { id: 'kusa', label: 'くさ', voice: '四国めたん', src: '/sounds/se/四国めたん_くさ.wav' },
+  { id: 'kakkee', label: 'かっけぇ', voice: '白上虎太郎', src: '/sounds/se/白上虎太郎_かっけぇ.wav' },
+  { id: 'cho-oma', label: 'ちょ，おま', voice: '麒ヶ島宗麟', src: '/sounds/se/麒ヶ島宗麟_ちょおま.wav' },
+  { id: 'kukanannyo', label: 'くかなんよ', voice: '黒沢冴白', src: '/sounds/se/黒沢冴白_くかなんよ.wav' },
+  { id: 'daruite', label: 'だるいてぇ', voice: '麒ヶ島宗麟', src: '/sounds/se/麒ヶ島宗麟_だるいてぇ.wav' },
 ] as const;
 
 export type PressSeId = (typeof PRESS_SES)[number]['id'];
