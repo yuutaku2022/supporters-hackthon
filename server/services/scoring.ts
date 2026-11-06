@@ -3,8 +3,13 @@ import { scoreOf } from '@/features/game/rules';
 import type { PostRecord } from '@/server/repositories/posts';
 import type { PublicPost, ScoreResponse } from '@/types/game';
 
-/** ブラウザに返す形にする（冷笑かどうか・モンスター・解説を落とす） */
-export const toPublicPost = (p: PostRecord): PublicPost => ({ id: p.id, speaker: p.speaker, text: p.text });
+/** ブラウザに返す形にする（モンスター・解説を落とす） */
+export const toPublicPost = (p: PostRecord): PublicPost => ({
+  id: p.id,
+  speaker: p.speaker,
+  text: p.text,
+  cold: Boolean(p.cold),
+});
 
 /**
  * 押したポストから最終スコアを計算する
