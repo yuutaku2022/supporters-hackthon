@@ -1,7 +1,7 @@
 import type { JudgeResponse } from '@/types/game';
 
 /**
- * バトルが終わったときにゲーム終了画面へ渡すデータ
+ * ゲームが終わったときにゲーム終了画面へ渡すデータ
  * ゲーム終了画面（担当は別メンバー）は、これと「もういちど」の onRetry だけを受け取る。
  */
 export type GameResult = {

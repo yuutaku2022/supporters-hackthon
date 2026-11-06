@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { scoreOf, TIME_LIMIT } from '@/features/game/rules';
+import { scoreOf } from '@/features/game/rules';
 import { MISS_SE, playRandomPressSe, playSe, preloadPressSes } from '@/lib/sound';
 import type { CheckResponse, PublicPost, PublicQuestion } from '@/types/game';
 import { PILL_DANGER, PILL_PRIMARY } from './styles';
@@ -46,7 +46,7 @@ type Mark = 'hit' | 'miss';
 type DisplayPost = Pick<PublicPost, 'id' | 'speaker' | 'text'> & { cold?: boolean };
 
 /**
- * バトル画面（X のタイムライン風）
+ * ゲーム画面（X のタイムライン風）
  * 1本の長いタイムラインをスクロールしながら、冷笑していると思うポストの「冷笑」を押す。その場で当たり／ハズレが出る。
  * 制限時間内にできるだけ多く見つける。時間切れで終わり。
  * ゲームをやり直すときは key を変えて作り直す前提（状態・タイマーをリセットするため）。
@@ -69,6 +69,7 @@ export function BattleScreen(props: Props) {
   const timeLeft = timer.limit === timeLimit ? timer.remaining : timeLimit;
   const [menuOpen, setMenuOpen] = useState(false);
   const done = useRef(false);
+  const hitSounds = useRef<Record<string, string>>({});
   const timelineRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
@@ -135,12 +136,21 @@ export function BattleScreen(props: Props) {
   }, [timeUp]);
 
   const press = async (postId: string) => {
-    if (marks[postId] || checking !== null || busy) return;
+    if (marks[postId]) {
+      const src = hitSounds.current[postId];
+      if (marks[postId] === 'hit' && src) playSe(src);
+      return;
+    }
+    if (checking !== null || busy) return;
     if (!('question' in props)) {
       const post = props.posts.find((item) => item.id === postId);
       if (post) {
-        if (post.cold) playRandomPressSe();
-        else playSe(MISS_SE);
+        if (post.cold) {
+          const src = playRandomPressSe();
+          if (src) hitSounds.current[postId] = src;
+        } else {
+          playSe(MISS_SE);
+        }
         setMarks((m) => ({ ...m, [postId]: post.cold ? 'hit' : 'miss' }));
       }
       return;
@@ -150,8 +160,12 @@ export function BattleScreen(props: Props) {
     setCheckError(null);
     try {
       const cold = (await props.onCheck(Number(postId), pressed.map(Number))).cold;
-      if (cold) playRandomPressSe();
-      else playSe(MISS_SE);
+      if (cold) {
+        const src = playRandomPressSe();
+        if (src) hitSounds.current[postId] = src;
+      } else {
+        playSe(MISS_SE);
+      }
       setMarks((m) => ({ ...m, [postId]: cold ? 'hit' : 'miss' }));
     } catch {
       setCheckError('判定できませんでした。もう一度押してください');
@@ -239,7 +253,26 @@ export function BattleScreen(props: Props) {
         )}
       </div>
 
-      {(timeUp || checkError || error) && (
+      {timeUp && !error && (
+        <div
+          className="absolute inset-0 z-20 grid place-items-center bg-black/75 px-6 text-center"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="flex flex-col items-center gap-4 rounded-3xl border border-x-line bg-x-bg/95 px-8 py-9 shadow-2xl">
+            <span
+              className="size-12 animate-spin rounded-full border-4 border-x-line border-t-x-pink motion-reduce:animate-none"
+              aria-hidden="true"
+            />
+            <div>
+              <p className="text-2xl font-extrabold text-x-pink">集計中…</p>
+              <p className="mt-2 text-sm text-x-sub">ゲーム結果をまとめています</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {(checkError || error) && (
         <div className="border-t border-x-line px-4 py-2.5 text-center text-sm" role="status">
           {error ? (
             <div className="text-x-danger" role="alert">
@@ -248,8 +281,6 @@ export function BattleScreen(props: Props) {
                 もう一度
               </button>
             </div>
-          ) : timeUp ? (
-            <p className="font-extrabold text-x-pink">時間切れ！ 結果を集計中…</p>
           ) : (
             <p className="text-x-danger" role="alert">{checkError}</p>
           )}
@@ -322,16 +353,22 @@ function Post({ post, seed, minutesAgo, mark, checking, disabled, onPress }: Pos
           <Stat icon={ICONS.repost} value={stats.reposts} />
           <Stat icon={ICONS.like} value={stats.likes} />
           <Stat icon={ICONS.views} value={stats.views} className="max-[399px]:hidden" />
-          {mark ? (
+          {mark === 'hit' ? (
+            <button
+              type="button"
+              aria-label="正解音をもう一度再生"
+              disabled={disabled}
+              onClick={onPress}
+              className="flex min-h-12 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-x-pink bg-x-pink px-5 text-[17px] font-extrabold whitespace-nowrap text-white animate-pop motion-reduce:animate-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-x-blue disabled:cursor-not-allowed"
+            >
+              うおっw
+            </button>
+          ) : mark === 'miss' ? (
             <span
-              className={`flex min-h-12 shrink-0 items-center gap-1.5 rounded-full border px-5 text-[17px] font-extrabold whitespace-nowrap ${
-                mark === 'hit'
-                  ? 'animate-pop border-x-pink bg-x-pink text-white motion-reduce:animate-none'
-                  : 'animate-shake border-x-line bg-x-line text-x-text motion-reduce:animate-none'
-              }`}
+              className="flex min-h-12 shrink-0 items-center gap-1.5 rounded-full border border-x-line bg-x-line px-5 text-[17px] font-extrabold whitespace-nowrap text-x-text animate-shake motion-reduce:animate-none"
               role="status"
             >
-              {mark === 'hit' ? 'うおっw' : 'ハズレ'}
+              ハズレ
             </span>
           ) : (
             <button
@@ -369,12 +406,12 @@ function PauseMenu({ onClose }: { onClose: () => void }) {
         <p className="mb-3 text-center text-lg font-extrabold">一時停止中</p>
         <div className="flex flex-col gap-2.5">
           <button type="button" className={`${PILL_PRIMARY} min-h-11`} onClick={onClose} autoFocus>
-            バトルにもどる
+            ゲームにもどる
           </button>
           <Link href="/" className={`${PILL_DANGER} flex min-h-11 items-center justify-center`}>
-            バトルをやめる
+            ゲームをやめる
           </Link>
-        </div>
+ 
         <p className="mt-3 text-center text-xs text-x-sub">やめるを選ぶと、このバトルの進行は消えます</p>
       </div>
     </div>
