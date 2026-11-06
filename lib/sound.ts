@@ -70,11 +70,13 @@ export function usePressSeIds() {
 }
 
 /** 設定で選ばれている SE の中からランダムに1つ鳴らす（何も選ばれていなければ鳴らさない） */
-export function playRandomPressSe() {
+export function playRandomPressSe(): string | null {
   const ids = unsavedIds ?? loadPressSeIds();
-  if (ids.length === 0) return;
+  if (ids.length === 0) return null;
   const id = ids[Math.floor(Math.random() * ids.length)];
-  playSe(PRESS_SES.find((s) => s.id === id)!.src);
+  const src = PRESS_SES.find((s) => s.id === id)!.src;
+  playSe(src);
+  return src;
 }
 
 /** 冷笑ボタンの SE（当たり・ハズレ）を全部先に読み込む */
