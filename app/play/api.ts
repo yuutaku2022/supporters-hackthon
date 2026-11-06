@@ -1,9 +1,8 @@
-import type { CheckResponse, HintRequest, HintResponse, PublicPost, ScoreResponse, TimelineResponse } from '@/types/game';
+import type { HintRequest, HintResponse, ScoreResponse, TimelineResponse } from '@/types/game';
 
 /**
  * ブラウザから呼ぶ API（app/api/ の Route Handler）
- *   GET  /api/timeline             1ゲーム分のタイムライン（ランダム）
- *   POST /api/posts/:postId/check  「冷笑」を押したポスト1件をその場で判定
+ *   GET  /api/timeline?offset=...  タイムラインを50件ずつ取得
  *   POST /api/score                時間切れのとき、押したポストからスコアを計算
  *   POST /api/hint                 まだ押していない冷笑ポストを1つ教える
  */
@@ -26,19 +25,36 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
-export async function fetchTimeline(signal?: AbortSignal): Promise<PublicPost[]> {
-  const url = `/api/timeline${location.search}`;
+export async function fetchTimeline(postIds?: string[], signal?: AbortSignal): Promise<TimelineResponse> {
+  const params = new URLSearchParams(location.search);
+  params.delete('offset');
+  params.delete('postId');
+  postIds?.forEach((id) => params.append('postId', id));
+  const url = `/api/timeline?${params.toString()}`;
   const body = await request<TimelineResponse>(url, { signal });
-  if (!Array.isArray(body.posts)) throw new ApiError('レスポンスに posts 配列がありません');
+  if (!Array.isArray(body.posts) || typeof body.hasMore !== 'boolean') {
+    throw new ApiError('レスポンスに posts 配列または hasMore がありません');
+  }
+  if (
+    postIds === undefined &&
+    (!Array.isArray(body.postIds) ||
+      body.postIds.some((id) => typeof id !== 'string') ||
+      new Set(body.postIds).size !== body.postIds.length)
+  ) {
+    throw new ApiError('初回レスポンスの postIds 配列が不正です');
+  }
   const bad = body.posts.findIndex(
-    (p) => typeof p?.id !== 'string' || typeof p?.speaker !== 'string' || typeof p?.text !== 'string',
+    (p) =>
+      typeof p?.id !== 'string' ||
+      typeof p?.speaker !== 'string' ||
+      typeof p?.text !== 'string' ||
+      typeof p?.cold !== 'boolean',
   );
-  if (bad >= 0) throw new ApiError(`posts[${bad}] の形が不正です（id / speaker / text が文字列ではない）`);
-  return body.posts;
+  if (bad >= 0) {
+    throw new ApiError(`posts[${bad}] の形が不正です（id / speaker / text / cold）`);
+  }
+  return body;
 }
-
-export const postCheck = (postId: string) =>
-  request<CheckResponse>(`/api/posts/${encodeURIComponent(postId)}/check`, { method: 'POST' });
 
 export const postScore = (pressed: string[], timeline: string[]) =>
   request<ScoreResponse>('/api/score', { method: 'POST', body: JSON.stringify({ pressed, timeline }) });
