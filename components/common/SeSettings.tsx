@@ -4,7 +4,7 @@ import { PILL } from '@/app/play/styles';
 import { playSe, PRESS_SES, savePressSeIds, usePressSeIds, type PressSeId } from '@/lib/sound';
 
 /**
- * 冷笑ボタンが当たりだったときの SE を選ぶ設定パーツ。設定画面と一時停止メニューの両方で使う。
+ * 冷笑ボタンが当たりだったときの SE を選ぶ設定パーツ。設定画面で使う。
  * 選んだ SE の中からランダムに1つ鳴る（ハズレは常にブザー）。選んだ内容はこのブラウザに保存される。
  */
 export function SeSettings() {
@@ -19,7 +19,7 @@ export function SeSettings() {
         冷笑ボタンの効果音
       </h2>
       <p className="mt-0.5 text-[13px] text-x-sub">
-        当たりのとき、選んだ音の中からランダムで鳴ります（{selected.length}/{PRESS_SES.length} 個）。ハズレはブザーです
+        当たりのとき、選んだ音の中からランダムで鳴ります。ハズレはブザーです
       </p>
 
       <ul className="mt-2 divide-y divide-x-line rounded-2xl border border-x-line">
@@ -32,10 +32,7 @@ export function SeSettings() {
                 checked={selected.includes(se.id)}
                 onChange={() => toggle(se.id)}
               />
-              <span className="min-w-0">
-                <span className="font-bold">{se.label}</span>
-                <span className="ml-1.5 text-[13px] text-x-sub">{se.voice}</span>
-              </span>
+              <span className="min-w-0 font-bold">{se.label}</span>
             </label>
             <button
               type="button"
@@ -43,7 +40,7 @@ export function SeSettings() {
               onClick={() => playSe(se.src)}
               aria-label={`${se.label}を試しに鳴らす`}
             >
-              ▶ 試聴
+              ▶
             </button>
           </li>
         ))}
