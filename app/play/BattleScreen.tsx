@@ -11,7 +11,10 @@ import { XPhone } from './XPhone';
 type TimelineProps = {
   posts: PublicPost[];
   timeLimit: number;
-  onCheck: (postId: string) => Promise<boolean>;
+  hasMore: boolean;
+  loadingMore: boolean;
+  loadMoreError: string | null;
+  onLoadMore: () => void;
   onFinish: (pressed: string[]) => void | Promise<void>;
   sending: boolean;
   error: string | null;
@@ -39,6 +42,7 @@ type QuestionProps = {
 type Props = TimelineProps | QuestionProps;
 
 type Mark = 'hit' | 'miss';
+type DisplayPost = Pick<PublicPost, 'id' | 'speaker' | 'text'> & { cold?: boolean };
 
 /**
  * バトル画面（X のタイムライン風）
@@ -51,6 +55,11 @@ export function BattleScreen(props: Props) {
   const posts = questionMode
     ? props.question.posts.map((post, index) => ({ ...post, id: String(index) }))
     : props.posts;
+  const timelineProps = 'question' in props ? null : props;
+  const hasMore = timelineProps?.hasMore ?? false;
+  const loadingMore = timelineProps?.loadingMore ?? false;
+  const loadMoreError = timelineProps?.loadMoreError ?? null;
+  const onLoadMore = timelineProps?.onLoadMore;
   const { sending, error, timeLimit } = props;
   const [marks, setMarks] = useState<Record<string, Mark>>({});
   const [checking, setChecking] = useState<string | null>(null);
@@ -60,6 +69,7 @@ export function BattleScreen(props: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const done = useRef(false);
   const timelineRef = useRef<HTMLDivElement>(null);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   const pressed = Object.keys(marks);
   const hitCount = pressed.filter((id) => marks[id] === 'hit').length;
@@ -92,6 +102,29 @@ export function BattleScreen(props: Props) {
     }, 1000);
     return () => window.clearInterval(id);
   }, [sending, menuOpen, timeLimit]);
+
+  useEffect(() => {
+    if (!hasMore || loadingMore || loadMoreError || !onLoadMore) return;
+    const root = timelineRef.current;
+    const target = loadMoreRef.current;
+    if (!root || !target) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) onLoadMore();
+      },
+      { root, rootMargin: '160px' },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [
+    posts.length,
+    hasMore,
+    loadingMore,
+    loadMoreError,
+    onLoadMore,
+  ]);
+
   // 0秒になったら、それまでに押したポストで採点
   useEffect(() => {
     if (timeUp) finish();
@@ -100,12 +133,16 @@ export function BattleScreen(props: Props) {
 
   const press = async (postId: string) => {
     if (marks[postId] || checking !== null || busy) return;
+    if (!('question' in props)) {
+      const post = props.posts.find((item) => item.id === postId);
+      if (post) setMarks((m) => ({ ...m, [postId]: post.cold ? 'hit' : 'miss' }));
+      return;
+    }
+
     setChecking(postId);
     setCheckError(null);
     try {
-      const cold = questionMode
-        ? (await props.onCheck(Number(postId), pressed.map(Number))).cold
-        : await props.onCheck(postId);
+      const cold = (await props.onCheck(Number(postId), pressed.map(Number))).cold;
       setMarks((m) => ({ ...m, [postId]: cold ? 'hit' : 'miss' }));
     } catch {
       setCheckError('判定できませんでした。もう一度押してください');
@@ -164,7 +201,27 @@ export function BattleScreen(props: Props) {
           />
         ))}
 
-        <p className="px-4 py-6 text-center text-sm text-x-sub">タイムラインはここまで</p>
+        {(!timelineProps?.hasMore || questionMode) && (
+          <p className="px-4 py-6 text-center text-sm text-x-sub">タイムラインはここまで</p>
+        )}
+        {timelineProps && (
+          <div ref={loadMoreRef} className="min-h-12 px-4 py-3 text-center text-sm text-x-sub" aria-live="polite">
+            {timelineProps.loadingMore ? (
+              <p>投稿を読み込み中…</p>
+            ) : timelineProps.loadMoreError ? (
+              <div role="alert">
+                <p>追加の投稿を読み込めませんでした（{timelineProps.loadMoreError}）</p>
+                <button type="button" className={`${PILL_PRIMARY} mt-2`} onClick={timelineProps.onLoadMore}>
+                  もう一度読み込む
+                </button>
+              </div>
+            ) : timelineProps.hasMore ? (
+              <p>スクロールして続きを読み込む</p>
+            ) : (
+              <p>すべての投稿を読み込みました</p>
+            )}
+          </div>
+        )}
       </div>
 
       {(timeUp || checkError || error) && (
@@ -215,7 +272,7 @@ const ICON_BUTTON =
   'grid size-11 shrink-0 cursor-pointer place-items-center rounded-full text-x-text hover:bg-x-text/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-x-blue';
 
 type PostProps = {
-  post: PublicPost;
+  post: DisplayPost;
   seed: string;
   minutesAgo: number;
   mark: Mark | undefined;
