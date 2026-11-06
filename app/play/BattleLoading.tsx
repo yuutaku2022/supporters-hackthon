@@ -8,7 +8,7 @@ type Props = {
   onRetry?: () => void;
 };
 
-/** API から問題を取ってくる間の画面（バトル画面と同じ X 風） */
+/** API から問題を取ってくる間の画面（ゲーム画面と同じ X 風） */
 export function BattleLoading({ error, onRetry }: Props) {
   return (
     <XPhone>
