@@ -1,7 +1,6 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { START_HINTS } from '@/features/game/rules';
 import { BGM, useBgm } from '@/lib/sound';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { evaluateAchievement } from '@/DB/achievement';
@@ -117,8 +116,10 @@ export function BattleGame() {
   const onFinish = async (pressed: string[]) => {
     setSending(true);
     setFinishError(null);
+    const minimumLoading = new Promise<void>((resolve) => window.setTimeout(resolve, 1000));
     try {
       const r = await postScore(pressed, posts.map((post) => post.id));
+      await minimumLoading;
       const stats = { score: r.score, hits: r.hits, wrong: r.wrong, missed: r.missed, timedOut: true };
       const achievement = evaluateAchievement(stats);
 
@@ -129,6 +130,7 @@ export function BattleGame() {
       });
       router.push(`${RESULT_PATH}?${params.toString()}`);
     } catch (e) {
+      await minimumLoading;
       setFinishError((e as Error).message);
       setSending(false);
     }

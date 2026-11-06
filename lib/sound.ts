@@ -12,12 +12,12 @@ export const MISS_SE = '/sounds/se/buzzer.mp3';
 
 /** 冷笑ボタンが当たりだったときに鳴る SE の候補。ここに足せば設定画面にも並ぶ */
 export const PRESS_SES = [
-  { id: 'uo', label: 'うお', voice: '玄野武宏', src: '/sounds/se/玄野武宏_うお.wav' },
+  { id: 'cho-oma', label: 'ちょ，おまｗ', voice: '麒ヶ島宗麟', src: '/sounds/se/麒ヶ島宗麟_ちょおま.wav' },
+  { id: 'uo', label: 'うおｗｗｗ', voice: '玄野武宏', src: '/sounds/se/玄野武宏_うお.wav' },
   { id: 'kusa', label: 'くさ', voice: '四国めたん', src: '/sounds/se/四国めたん_くさ.wav' },
-  { id: 'kakkee', label: 'かっけぇ', voice: '白上虎太郎', src: '/sounds/se/白上虎太郎_かっけぇ.wav' },
-  { id: 'cho-oma', label: 'ちょ，おま', voice: '麒ヶ島宗麟', src: '/sounds/se/麒ヶ島宗麟_ちょおま.wav' },
-  { id: 'kukanannyo', label: 'くかなんよ', voice: '黒沢冴白', src: '/sounds/se/黒沢冴白_くかなんよ.wav' },
-  { id: 'daruite', label: 'だるいてぇ', voice: '麒ヶ島宗麟', src: '/sounds/se/麒ヶ島宗麟_だるいてぇ.wav' },
+  { id: 'kakkee', label: 'かっけぇｗｗｗ', voice: '白上虎太郎', src: '/sounds/se/白上虎太郎_かっけぇ.wav' },
+  { id: 'kukanannyo', label: 'くかなんよｗ', voice: '黒沢冴白', src: '/sounds/se/黒沢冴白_くかなんよ.wav' },
+  { id: 'daruite', label: 'だるいてｗｗｗ', voice: '麒ヶ島宗麟', src: '/sounds/se/麒ヶ島宗麟_だるいてぇ.wav' },
 ] as const;
 
 export type PressSeId = (typeof PRESS_SES)[number]['id'];
@@ -70,11 +70,13 @@ export function usePressSeIds() {
 }
 
 /** 設定で選ばれている SE の中からランダムに1つ鳴らす（何も選ばれていなければ鳴らさない） */
-export function playRandomPressSe() {
+export function playRandomPressSe(): string | null {
   const ids = unsavedIds ?? loadPressSeIds();
-  if (ids.length === 0) return;
+  if (ids.length === 0) return null;
   const id = ids[Math.floor(Math.random() * ids.length)];
-  playSe(PRESS_SES.find((s) => s.id === id)!.src);
+  const src = PRESS_SES.find((s) => s.id === id)!.src;
+  playSe(src);
+  return src;
 }
 
 /** 冷笑ボタンの SE（当たり・ハズレ）を全部先に読み込む */
