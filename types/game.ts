@@ -2,15 +2,16 @@
  * 冷笑ハンターの API でやりとりする型（サーバー・フロント共通）
  *
  * 1ゲーム＝1本の長いタイムライン。制限時間内に、冷笑しているポストをできるだけ多く見つける。
- * どのポストが冷笑かはブラウザに渡さない。判定・採点はサーバーで行う。
+ * 投稿一覧に冷笑フラグを含め、ゲーム中の個別判定API呼び出しをなくす。
  */
 
-/** ポスト1件（ブラウザに渡す形。冷笑かどうかは含めない） */
+/** ポスト1件（ブラウザに渡す形） */
 export type PublicPost = {
   id: string;
   /** 投稿者の @ハンドル */
   speaker: string;
   text: string;
+  cold: boolean;
 };
 
 export type PublicQuestion = {
@@ -21,6 +22,9 @@ export type PublicQuestion = {
 /** GET /api/timeline */
 export type TimelineResponse = {
   posts: PublicPost[];
+  hasMore: boolean;
+  /** 初回レスポンスのみ。ゲーム中のランダムな投稿順を保持する */
+  postIds?: string[];
 };
 
 export type QuestionsResponse = {
@@ -32,7 +36,7 @@ export type CheckRequest = {
   found: number[];
 };
 
-/** POST /api/posts/:postId/check のレスポンス（「冷笑」を押したポスト1件をその場で判定） */
+/** 問題形式の投稿チェックレスポンス */
 export type CheckResponse = {
   cold: boolean;
   remaining?: number;

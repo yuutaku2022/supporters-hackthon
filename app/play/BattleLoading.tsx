@@ -28,7 +28,13 @@ export function BattleLoading({ error, onRetry }: Props) {
         </div>
       </header>
 
-      <div className="flex grow flex-col items-center justify-center gap-2 p-6 text-center" role="status" aria-live="polite">
+      <div
+        className={`flex flex-col items-center justify-center gap-3 p-6 text-center ${
+          error ? 'grow' : 'absolute inset-0 z-10 bg-black/45 backdrop-blur-[1px]'
+        }`}
+        role="status"
+        aria-live="polite"
+      >
         {error ? (
           <>
             <p className="text-xl font-extrabold">読み込めませんでした</p>
@@ -40,8 +46,11 @@ export function BattleLoading({ error, onRetry }: Props) {
           </>
         ) : (
           <>
-            <span className="size-7 animate-spin rounded-full border-3 border-x-blue/25 border-t-x-blue" aria-hidden="true" />
-            <span className="sr-only">読み込み中</span>
+            <span
+              className="size-10 animate-spin rounded-full border-[3px] border-white/20 border-t-x-blue shadow-[0_0_16px_color-mix(in_srgb,var(--color-x-blue)_45%,transparent)]"
+              aria-hidden="true"
+            />
+            <span className="text-sm font-medium text-x-text">タイムラインを読み込み中…</span>
           </>
         )}
       </div>
