@@ -10,6 +10,7 @@ const TABLE_NAME = "comments";
 export interface GetCommentsOptions {
   flag?: CommentFlag;
   limit?: number;
+  offset?: number;
   random?: boolean;
 }
 
@@ -83,9 +84,10 @@ export async function getComments(
     query = query.eq("is_creepy", flagToBoolean(options.flag));
   }
 
-  // ランダム取得でない場合のみ DB 側で limit をかける
+  // ランダム取得でない場合のみ DB 側でページングする
   if (!options.random && options.limit && options.limit > 0) {
-    query = query.limit(options.limit);
+    const offset = options.offset ?? 0;
+    query = query.range(offset, offset + options.limit - 1);
   }
 
   const { data, error } = await query;
@@ -100,6 +102,32 @@ export async function getComments(
     const targetLimit =
       options.limit && options.limit > 0 ? options.limit : 50;
     return shuffleArray(records).slice(0, targetLimit);
+  }
+
+  return records;
+}
+
+/**
+ * 指定した ID の文章を取得します。大きな ID 配列は分割し、DB の応答上限を超えないようにします。
+ */
+export async function getCommentsByIds(
+  ids: Array<number | string>
+): Promise<CommentRecord[]> {
+  const supabase = getSupabaseServerClient();
+  const records: CommentRecord[] = [];
+
+  for (let i = 0; i < ids.length; i += 500) {
+    const { data, error } = await supabase
+      .from(TABLE_NAME)
+      .select("id, content, is_creepy, created_at")
+      .in("id", ids.slice(i, i + 500))
+      .order("id", { ascending: true });
+
+    if (error) {
+      throw new Error(`DBからの文章取得に失敗しました: ${error.message}`);
+    }
+
+    records.push(...((data ?? []) as RawCommentRow[]).map(mapRowToRecord));
   }
 
   return records;

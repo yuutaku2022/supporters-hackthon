@@ -1,8 +1,8 @@
 // APIのレスポンス確認スクリプト
 //   npm run api:check                               → http://localhost:3000/api（npm run dev 中に実行）
 //   npm run api:check -- https://xxx.vercel.app/api → Preview / Production を確認
-// GET {base}/timeline を叩いて形と件数をチェックし、答え（cold）が漏れていないか確認する。
-// あわせて check / score / hint が返るかも確認する。
+// GET {base}/timeline を叩いてランダムページングとレスポンスの形を確認する。
+// あわせて score / hint が返るかも確認する。
 
 const base = (process.argv[2] || 'http://localhost:3000/api').replace(/\/$/, '');
 
@@ -34,14 +34,47 @@ try {
     t.res.ok &&
     Array.isArray(posts) &&
     posts.length > 0 &&
-    posts.every((p) => typeof p?.id === 'string' && typeof p?.speaker === 'string' && typeof p?.text === 'string');
-  const leaked = Array.isArray(posts) && posts.some((p) => 'cold' in p || 'monsterId' in p || 'explanation' in p);
-  report(shapeOk && !leaked, 'timeline', `HTTP ${t.res.status}  ${t.ms}ms  ${Array.isArray(posts) ? `${posts.length}件` : t.text.slice(0, 80)}${leaked ? '  答えがブラウザに漏れている' : ''}`);
+    posts.length <= 25 &&
+    Array.isArray(t.body?.postIds) &&
+    t.body.postIds.length >= posts.length &&
+    new Set(t.body.postIds).size === t.body.postIds.length &&
+    posts.every((p, index) => p.id === t.body.postIds[index]) &&
+    typeof t.body?.hasMore === 'boolean' &&
+    posts.every((p) =>
+      typeof p?.id === 'string' &&
+      typeof p?.speaker === 'string' &&
+      typeof p?.text === 'string' &&
+      typeof p?.cold === 'boolean'
+    );
+  const leaked = Array.isArray(posts) && posts.some((p) => 'monsterId' in p || 'explanation' in p);
+  report(shapeOk && !leaked, 'timeline', `HTTP ${t.res.status}  ${t.ms}ms  ${Array.isArray(posts) ? `${posts.length}件` : t.text.slice(0, 80)}${leaked ? '  不要な情報が返っている' : ''}`);
+
+  const invalidPostId = await call('/timeline?postId=');
+  report(invalidPostId.res.status === 400, 'invalid post ID', `HTTP ${invalidPostId.res.status}  ${invalidPostId.ms}ms`);
 
   if (shapeOk) {
     const ids = posts.map((p) => p.id);
-    const c = await call(`/posts/${encodeURIComponent(ids[0])}/check`, { method: 'POST' });
-    report(c.res.ok && typeof c.body?.cold === 'boolean', `check ${ids[0]}`, `HTTP ${c.res.status}  ${c.ms}ms  ${JSON.stringify(c.body)}`);
+    if (t.body.hasMore) {
+      const nextIds = t.body.postIds.slice(25, 51);
+      const nextParams = new URLSearchParams();
+      nextIds.forEach((id) => nextParams.append('postId', id));
+      const next = await call(`/timeline?${nextParams}`);
+      const nextPosts = next.body?.posts;
+      const nextOk =
+        next.res.ok &&
+        Array.isArray(nextPosts) &&
+        nextPosts.length <= 25 &&
+        typeof next.body?.hasMore === 'boolean' &&
+        nextPosts.every((p, index) => p.id === nextIds[index]) &&
+        nextPosts.every((p) =>
+          typeof p?.id === 'string' &&
+          typeof p?.speaker === 'string' &&
+          typeof p?.text === 'string' &&
+          typeof p?.cold === 'boolean'
+        ) &&
+        !nextPosts.some((p) => ids.includes(p.id));
+      report(nextOk, 'timeline pagination', `HTTP ${next.res.status}  ${next.ms}ms  ${Array.isArray(nextPosts) ? `${nextPosts.length}件` : next.text.slice(0, 80)}`);
+    }
 
     const s = await call('/score', { method: 'POST', body: JSON.stringify({ pressed: ids.slice(0, 3), timeline: ids }) });
     report(s.res.ok && typeof s.body?.score === 'number' && typeof s.body?.missed === 'number', 'score', `HTTP ${s.res.status}  ${s.ms}ms  ${JSON.stringify(s.body)}`);

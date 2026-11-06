@@ -10,8 +10,7 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as Partial<ScoreRequest> | null;
   if (
     !isStringArray(body?.pressed) ||
-    (body.timeline !== undefined &&
-      (!isStringArray(body.timeline) || body.timeline.length === 0 || body.timeline.length > 50))
+    (body.timeline !== undefined && (!isStringArray(body.timeline) || body.timeline.length === 0))
   ) {
     return Response.json({ error: 'pressed / timeline が不正です' } satisfies ApiErrorBody, { status: 400 });
   }
