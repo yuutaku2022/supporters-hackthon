@@ -193,7 +193,7 @@ export function BattleScreen(props: Props) {
         </div>
       </header>
 
-      <div ref={timelineRef} className="grow overflow-y-auto">
+      <div ref={timelineRef} className="min-h-0 grow overflow-y-auto">
         <p className="border-b border-x-line px-4 py-2.5 text-center text-sm text-x-sub">
           時間内に<strong className="text-x-pink">冷笑している投稿</strong>をできるだけ見つけよう
         </p>
@@ -226,7 +226,13 @@ export function BattleScreen(props: Props) {
                 </button>
               </div>
             ) : timelineProps.hasMore ? (
-              <p>スクロールして続きを読み込む</p>
+              <button
+                type="button"
+                className={`${PILL_PRIMARY} min-h-10`}
+                onClick={timelineProps.onLoadMore}
+              >
+                続きを読み込む
+              </button>
             ) : (
               <p>すべての投稿を読み込みました</p>
             )}
