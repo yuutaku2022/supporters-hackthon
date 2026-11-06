@@ -4,9 +4,8 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { scoreOf, TIME_LIMIT } from '@/features/game/rules';
 import { MISS_SE, playRandomPressSe, playSe, preloadPressSes } from '@/lib/sound';
-import { SeSettings } from '@/components/common/SeSettings';
 import type { CheckResponse, PublicPost, PublicQuestion } from '@/types/game';
-import { PILL, PILL_DANGER, PILL_PRIMARY } from './styles';
+import { PILL_DANGER, PILL_PRIMARY } from './styles';
 import { XPhone } from './XPhone';
 
 /** /play で使っている形：1本の長いタイムライン */
@@ -354,7 +353,6 @@ function Post({ post, seed, minutesAgo, mark, checking, disabled, onPress }: Pos
 
 /** 一時停止メニュー（開いている間はタイマーが止まる） */
 function PauseMenu({ onClose }: { onClose: () => void }) {
-  const [soundOpen, setSoundOpen] = useState(false);
   return (
     <div
       className="absolute inset-0 z-10 flex items-end bg-[rgba(91,112,131,0.4)]"
@@ -373,29 +371,11 @@ function PauseMenu({ onClose }: { onClose: () => void }) {
           <button type="button" className={`${PILL_PRIMARY} min-h-11`} onClick={onClose} autoFocus>
             バトルにもどる
           </button>
-          {/* バトルを続けたまま効果音を変えられるように、メニューの中で開く */}
-          <button
-            type="button"
-            className={`${PILL} min-h-11`}
-            onClick={() => setSoundOpen((o) => !o)}
-            aria-expanded={soundOpen}
-            aria-controls="pause-se-settings"
-          >
-            効果音 {soundOpen ? '▲' : '▼'}
-          </button>
-          {soundOpen && (
-            <div id="pause-se-settings" className="py-1">
-              <SeSettings />
-            </div>
-          )}
-          <Link href="/settings" className={`${PILL} flex min-h-11 items-center justify-center`}>
-            設定
-          </Link>
           <Link href="/" className={`${PILL_DANGER} flex min-h-11 items-center justify-center`}>
             バトルをやめる
           </Link>
         </div>
-        <p className="mt-3 text-center text-xs text-x-sub">設定・やめるを選ぶと、このバトルの進行は消えます</p>
+        <p className="mt-3 text-center text-xs text-x-sub">やめるを選ぶと、このバトルの進行は消えます</p>
       </div>
     </div>
   );
