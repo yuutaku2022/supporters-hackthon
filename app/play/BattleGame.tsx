@@ -1,6 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { START_HINTS } from '@/features/game/rules';
+import { BGM, useBgm } from '@/lib/sound';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { evaluateAchievement } from '@/DB/achievement';
 import { TIME_LIMIT, TIMELINE_PAGE_SIZE } from '@/features/game/rules';
@@ -32,6 +34,9 @@ export function BattleGame() {
   const seenPostIds = useRef(new Set<string>());
   const fetchingMore = useRef(false);
   const paginationController = useRef<AbortController | null>(null);
+
+  // /play にいる間ずっと BGM を流す（読み込み中・やり直し中も途切れない）。結果画面などへ移ると止まる
+  useBgm(BGM.battle);
 
   useEffect(() => {
     const ctrl = new AbortController();
