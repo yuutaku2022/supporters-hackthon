@@ -1,7 +1,9 @@
 import 'server-only';
 import { connection } from 'next/server';
 import type { CommentRecord } from '@/DB/comment';
-import { getComments, getCommentsByIds } from '@/DB/commentRepository';
+import { getComments, getCommentsByIds, getCommentsCount } from '@/DB/commentRepository';
+import { TIMELINE_PAGE_SIZE } from '@/features/game/rules';
+import type { TimelineCursor } from '@/types/game';
 import { MOCK_POSTS } from './mock-posts';
 
 /**
@@ -26,23 +28,36 @@ export type PostRecord = {
   explanation?: string;
 };
 
-/** ゲーム開始時に全投稿をランダムな順序で返す */
-export async function findRandomPosts(): Promise<PostRecord[]> {
+/** ランダムな位置からタイムラインを1ページだけ取得する */
+export async function findRandomPostsPage(cursor?: TimelineCursor): Promise<{
+  posts: PostRecord[];
+  cursor?: TimelineCursor;
+}> {
   await connection(); // リクエストごとに違う結果を返すので、ビルド時に固定しない
-  const posts: PostRecord[] = [];
 
   if (!hasDatabase()) {
-    posts.push(...MOCK_POSTS);
-  } else {
-    const pageSize = 1000;
-    for (let offset = 0; ; offset += pageSize) {
-      const comments = await getComments({ limit: pageSize, offset });
-      posts.push(...comments.map(toPost));
-      if (comments.length < pageSize) break;
-    }
+    const total = MOCK_POSTS.length;
+    if (total === 0) return { posts: [] };
+    const offset = cursor?.offset ?? Math.floor(Math.random() * total);
+    const remaining = cursor?.remaining ?? total;
+    const count = Math.min(TIMELINE_PAGE_SIZE, remaining);
+    const posts = Array.from({ length: count }, (_, index) => MOCK_POSTS[(offset + index) % total]);
+    return nextPage(posts, offset, remaining, total);
   }
 
-  return shuffle(posts);
+  const total = cursor?.total ?? await getCommentsCount();
+  if (total === 0) return { posts: [] };
+
+  const offset = cursor?.offset ?? Math.floor(Math.random() * total);
+  const remaining = cursor?.remaining ?? total;
+  const count = Math.min(TIMELINE_PAGE_SIZE, remaining);
+  const firstCount = Math.min(count, total - offset);
+  const firstPage = await getComments({ limit: firstCount, offset });
+  const wrappedCount = count - firstPage.length;
+  const wrappedPage = wrappedCount > 0
+    ? await getComments({ limit: wrappedCount, offset: 0 })
+    : [];
+  return nextPage([...firstPage, ...wrappedPage].map(toPost), offset, remaining, total);
 }
 
 /** id で指定したポストを返す（見つからない id は含めない） */
@@ -65,6 +80,17 @@ function shuffle<T>(items: T[]): T[] {
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
   return shuffled;
+}
+
+function nextPage(posts: PostRecord[], offset: number, remaining: number, total: number) {
+  const nextOffset = (offset + posts.length) % total;
+  const nextRemaining = Math.max(0, remaining - posts.length);
+  return {
+    posts: shuffle(posts),
+    ...(nextRemaining > 0
+      ? { cursor: { offset: nextOffset, remaining: nextRemaining, total } }
+      : {}),
+  };
 }
 
 const hasDatabase = () =>

@@ -1,12 +1,11 @@
 import type { NextRequest } from 'next/server';
-import { TIMELINE_PAGE_SIZE } from '@/features/game/rules';
-import { findPostsByIds, findRandomPosts } from '@/server/repositories/posts';
+import { findRandomPostsPage } from '@/server/repositories/posts';
 import { toPublicPost } from '@/server/services/scoring';
-import type { ApiErrorBody, TimelineResponse } from '@/types/game';
+import type { ApiErrorBody, TimelineCursor, TimelineResponse } from '@/types/game';
 
 /**
- * GET /api/timeline → ランダムなタイムラインの最初の25件と、そのゲーム内の投稿順
- * GET /api/timeline?postId=... → 投稿順に沿った追加の25件
+ * GET /api/timeline → ランダムな位置からタイムラインを25件取得
+ * GET /api/timeline?offset=...&remaining=...&total=... → 続きの25件
  * 冷笑フラグは返すが、モンスター・解説は返さない。
  *
  * 開発中だけ ?delay=ミリ秒 で遅延、?status=500 などでエラーを再現できる（読み込み・エラー表示の確認用）。
@@ -20,31 +19,41 @@ export async function GET(request: NextRequest) {
     if (forced >= 400) return Response.json({ error: 'forced error' } satisfies ApiErrorBody, { status: forced });
   }
 
-  const requestedIds = request.nextUrl.searchParams.getAll('postId');
-  if (
-    requestedIds.some((id) => !id) ||
-    new Set(requestedIds).size !== requestedIds.length ||
-    requestedIds.length > TIMELINE_PAGE_SIZE + 1
-  ) {
-    return Response.json({ error: 'postId は重複のない投稿IDを最大26件指定してください' } satisfies ApiErrorBody, { status: 400 });
+  const params = request.nextUrl.searchParams;
+  const cursorKeys = ['offset', 'remaining', 'total'] as const;
+  const hasCursor = cursorKeys.some((key) => params.has(key));
+  if (params.has('postId') || (hasCursor && !cursorKeys.every((key) => params.has(key)))) {
+    return Response.json({ error: 'ページカーソルが不正です' } satisfies ApiErrorBody, { status: 400 });
+  }
+
+  let cursor: TimelineCursor | undefined;
+  if (hasCursor) {
+    const values = cursorKeys.map((key) => params.get(key)!);
+    if (values.some((value) => !/^\d+$/.test(value))) {
+      return Response.json({ error: 'ページカーソルは整数で指定してください' } satisfies ApiErrorBody, { status: 400 });
+    }
+    const [offset, remaining, total] = values.map(Number);
+    if (
+      !Number.isSafeInteger(offset) ||
+      !Number.isSafeInteger(remaining) ||
+      !Number.isSafeInteger(total) ||
+      total < 1 ||
+      offset >= total ||
+      remaining < 1 ||
+      remaining > total
+    ) {
+      return Response.json({ error: 'ページカーソルの範囲が不正です' } satisfies ApiErrorBody, { status: 400 });
+    }
+    cursor = { offset, remaining, total };
   }
 
   try {
-    let response: TimelineResponse;
-    if (requestedIds.length > 0) {
-      const posts = await findPostsByIds(requestedIds.slice(0, TIMELINE_PAGE_SIZE));
-      response = {
-        posts: posts.map(toPublicPost),
-        hasMore: requestedIds.length > TIMELINE_PAGE_SIZE,
-      };
-    } else {
-      const posts = await findRandomPosts();
-      response = {
-        posts: posts.slice(0, TIMELINE_PAGE_SIZE).map(toPublicPost),
-        postIds: posts.map((post) => post.id),
-        hasMore: posts.length > TIMELINE_PAGE_SIZE,
-      };
-    }
+    const page = await findRandomPostsPage(cursor);
+    const response: TimelineResponse = {
+      posts: page.posts.map(toPublicPost),
+      hasMore: Boolean(page.cursor),
+      ...(page.cursor ? { cursor: page.cursor } : {}),
+    };
     return Response.json(response);
   } catch (e) {
     return serverError(e);
