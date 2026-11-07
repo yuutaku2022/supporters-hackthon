@@ -1,5 +1,5 @@
 /** ゲームのルール定数（サーバーの採点とブラウザの表示で共通） */
-export const TIME_LIMIT = 60; // 1ゲームの制限時間（秒）
+export const TIME_LIMIT = 45; // 1ゲームの制限時間（秒）
 export const TIME_BONUS_PER_SEC = 10;
 export const START_HINTS = 2;
 export const QUESTIONS_PER_GAME = 3;
