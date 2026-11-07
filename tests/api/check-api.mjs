@@ -76,7 +76,7 @@ try {
       report(nextOk, 'timeline pagination', `HTTP ${next.res.status}  ${next.ms}ms  ${Array.isArray(nextPosts) ? `${nextPosts.length}件` : next.text.slice(0, 80)}`);
     }
 
-    const s = await call('/score', { method: 'POST', body: JSON.stringify({ pressed: ids.slice(0, 3), timeline: ids }) });
+    const s = await call('/score', { method: 'POST', body: JSON.stringify({ pressed: ids.slice(0, 3), notCold: ids.slice(3, 5), timeline: ids }) });
     report(s.res.ok && typeof s.body?.score === 'number' && typeof s.body?.missed === 'number', 'score', `HTTP ${s.res.status}  ${s.ms}ms  ${JSON.stringify(s.body)}`);
 
     const h = await call('/hint', { method: 'POST', body: JSON.stringify({ timeline: ids, pressed: [] }) });

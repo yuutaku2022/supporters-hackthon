@@ -112,13 +112,13 @@ export function BattleGame() {
 
   if (!posts) return <BattleLoading error={loadError} onRetry={reset} />;
 
-  // 時間切れ：押したポストからサーバーでスコアを計算して結果画面へ
-  const onFinish = async (pressed: string[]) => {
+  // 時間切れ：押したポスト（pressed＝冷笑、notCold＝冷笑じゃない）からサーバーでスコアを計算して結果画面へ
+  const onFinish = async (pressed: string[], notCold: string[]) => {
     setSending(true);
     setFinishError(null);
     const minimumLoading = new Promise<void>((resolve) => window.setTimeout(resolve, 1000));
     try {
-      const r = await postScore(pressed, posts.map((post) => post.id));
+      const r = await postScore(pressed, posts.map((post) => post.id), notCold);
       await minimumLoading;
       const stats = { score: r.score, hits: r.hits, wrong: r.wrong, missed: r.missed, timedOut: true };
       const achievement = evaluateAchievement(stats);
