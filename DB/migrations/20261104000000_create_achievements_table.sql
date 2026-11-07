@@ -8,8 +8,12 @@ create table if not exists public.play_achievements (
   achievement_id text not null check (
     achievement_id in (
       'perfect_hunter',
+      'sniper',
+      'master_of_cynicism',
       'dawn_of_cynicism',
+      'half_and_half',
       'keep_trying',
+      'trigger_happy',
       'cold_observer',
       'hot_blooded'
     )
