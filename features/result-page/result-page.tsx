@@ -3,14 +3,17 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { AchievementDefinition } from "@/DB/achievement";
-import { playSe, preloadSe } from "@/lib/sound";
+import {
+  playSe,
+  preloadSe,
+  RESULT_TYPING_SE,
+  TITLE_REVEAL_SE,
+} from "@/lib/sound";
 
 const question = "＠ちょっ，おまw. スコアと称号を教えて";
 const answerPrefix = "あなたのスコアは ";
 const answerMiddle = " 点でした。\n獲得称号は「";
 const answerSuffix = "」です。";
-const typingSound = "/sounds/se/character-forwarding.mp3";
-const titleRevealSound = "/sounds/se/rhythm-heaven-fever-ok-jingle-loud.mp3";
 const titleRevealDelay = 700;
 
 type ConversationProps = {
@@ -71,9 +74,6 @@ function Conversation({ onReplay, score, achievement }: ConversationProps) {
     ).matches;
     const typingDelay = reducedMotion ? 0 : 42;
     const pauseDelay = reducedMotion ? 0 : 500;
-    preloadSe(typingSound);
-    preloadSe(titleRevealSound);
-
     const playTypingSound = (character: string) => {
       const now = performance.now();
       if (
@@ -81,7 +81,7 @@ function Conversation({ onReplay, score, achievement }: ConversationProps) {
         !/\s/.test(character) &&
         now - lastTypingSoundAt >= 160
       ) {
-        playSe(typingSound, 0.18);
+        playSe(RESULT_TYPING_SE, 0.18);
         lastTypingSoundAt = now;
       }
     };
@@ -96,7 +96,7 @@ function Conversation({ onReplay, score, achievement }: ConversationProps) {
       } else if (hasAchievement) {
         setStage("revealing-title");
         timer = window.setTimeout(() => {
-          playSe(titleRevealSound, 1);
+          playSe(TITLE_REVEAL_SE, 1);
           setStage("done");
         }, titleRevealDelay);
       } else {
@@ -126,9 +126,15 @@ function Conversation({ onReplay, score, achievement }: ConversationProps) {
       }
     };
 
-    timer = window.setTimeout(typeQuestion, reducedMotion ? 0 : 400);
+    let cancelled = false;
+    void Promise.all([preloadSe(RESULT_TYPING_SE), preloadSe(TITLE_REVEAL_SE)]).then(() => {
+      if (!cancelled) timer = window.setTimeout(typeQuestion, reducedMotion ? 0 : 400);
+    });
 
-    return () => window.clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [answer, hasAchievement]);
 
   const scoreEnd = answerPrefix.length + answerScore.length;

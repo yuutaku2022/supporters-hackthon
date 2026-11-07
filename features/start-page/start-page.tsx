@@ -1,5 +1,6 @@
-import Link from 'next/link';
 import { XPhone } from '@/app/play/XPhone';
+import Link from 'next/link';
+import { GameStartLink } from './GameStartLink';
 
 /** 背景に流す「冷笑っぽい言葉」。HIT は当たりのスタンプとして混ぜる */
 const HIT = 'うおっw';
@@ -55,15 +56,14 @@ export function StartPage() {
 
         <div className="grow" />
 
-        <Link
-          href="/play"
+        <GameStartLink
           className="mt-8 flex min-h-14 items-center justify-center gap-2 rounded-full bg-x-pink text-lg font-extrabold text-white shadow-[0_8px_24px_rgba(249,24,128,0.35)] transition-colors hover:bg-[#d9156f] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-x-blue"
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
             <path d="M12 2v20M4 7l16 10M20 7L4 17M9 3.5L12 6l3-2.5M9 20.5l3-2.5 3 2.5" />
           </svg>
           ゲームスタート
-        </Link>
+        </GameStartLink>
         <Link
           href="/settings"
           className="mt-3 flex min-h-14 items-center justify-center gap-2 rounded-full border border-[#536471] text-lg font-extrabold text-x-text transition-colors hover:bg-x-text/10 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-x-blue"

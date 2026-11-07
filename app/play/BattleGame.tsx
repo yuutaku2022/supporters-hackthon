@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { BGM, useBgm } from '@/lib/sound';
+import { BGM, preloadPressSes, useBgm } from '@/lib/sound';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { evaluateAchievement } from '@/DB/achievement';
 import { TIME_LIMIT, TIMELINE_PAGE_SIZE } from '@/features/game/rules';
@@ -39,8 +39,8 @@ export function BattleGame() {
 
   useEffect(() => {
     const ctrl = new AbortController();
-    fetchTimeline(undefined, ctrl.signal)
-      .then((page) => {
+    Promise.all([fetchTimeline(undefined, ctrl.signal), preloadPressSes()])
+      .then(([page]) => {
         if (ctrl.signal.aborted) return;
         if (page.posts.length === 0) throw new ApiError('投稿がまだ登録されていません');
         postOrder.current = page.postIds ?? [];
