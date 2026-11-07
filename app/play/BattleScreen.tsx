@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { scoreOf } from '@/features/game/rules';
-import { MISS_SE, playRandomPressSe, playSe, preloadPressSes } from '@/lib/sound';
+import { MISS_SE, playRandomPressSe, playSe, preloadPressSes, stopAllSe, unlockAudio } from '@/lib/sound';
 import type { CheckResponse, PublicPost, PublicQuestion } from '@/types/game';
 import { PILL_DANGER, PILL_PRIMARY } from './styles';
 import { XPhone } from './XPhone';
@@ -85,6 +85,7 @@ export function BattleScreen(props: Props) {
   const finish = () => {
     if (done.current) return;
     done.current = true;
+    stopAllSe();
     if (questionMode) {
       void props.onFinish(pressed.map(Number), timeLeft);
     } else {
@@ -96,7 +97,10 @@ export function BattleScreen(props: Props) {
     finish();
   };
 
-  useEffect(preloadPressSes, []);
+  useEffect(() => {
+    void preloadPressSes();
+    return () => stopAllSe();
+  }, []);
 
   // タイマー。採点待ち・メニューを開いている間は止める
   useEffect(() => {
@@ -139,6 +143,7 @@ export function BattleScreen(props: Props) {
   }, [timeUp]);
 
   const press = async (postId: string) => {
+    unlockAudio();
     if (lastPressedPostId.current === postId) {
       currentSamePostStreak.current += 1;
     } else {
