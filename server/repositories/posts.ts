@@ -2,6 +2,7 @@ import 'server-only';
 import { connection } from 'next/server';
 import type { CommentRecord } from '@/DB/comment';
 import { getComments, getCommentsByIds, getCommentsCount } from '@/DB/commentRepository';
+import { hasSupabaseServerConfig } from '@/DB/server';
 import { TIMELINE_PAGE_SIZE } from '@/features/game/rules';
 import type { TimelineCursor } from '@/types/game';
 import { MOCK_POSTS } from './mock-posts';
@@ -93,11 +94,7 @@ function nextPage(posts: PostRecord[], offset: number, remaining: number, total:
   };
 }
 
-const hasDatabase = () =>
-  Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-      (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
-  );
+const hasDatabase = () => hasSupabaseServerConfig();
 
 function toPost(c: CommentRecord): PostRecord {
   const id = String(c.id);
