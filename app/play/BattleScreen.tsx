@@ -120,7 +120,7 @@ export function BattleScreen(props: Props) {
       (entries) => {
         if (entries.some((entry) => entry.isIntersecting)) onLoadMore();
       },
-      { root, rootMargin: '160px' },
+      { root, rootMargin: '320px 0px' },
     );
     observer.observe(target);
     return () => observer.disconnect();
@@ -219,7 +219,21 @@ export function BattleScreen(props: Props) {
         </div>
       </header>
 
-      <div ref={timelineRef} className="min-h-0 grow overflow-y-auto">
+      <div
+        ref={timelineRef}
+        className="min-h-0 grow overflow-y-auto"
+        onScroll={(event) => {
+          const element = event.currentTarget;
+          if (
+            hasMore &&
+            !loadingMore &&
+            !loadMoreError &&
+            element.scrollHeight - element.scrollTop - element.clientHeight <= 160
+          ) {
+            onLoadMore?.();
+          }
+        }}
+      >
         <p className="border-b border-x-line px-4 py-2.5 text-center text-sm text-x-sub">
           時間内に<strong className="text-x-pink">冷笑している投稿</strong>をできるだけ見つけよう
         </p>
