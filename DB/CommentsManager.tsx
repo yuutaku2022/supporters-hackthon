@@ -149,7 +149,7 @@ export default function CommentsManager() {
 
       const result = await response.json();
       if (!response.ok) {
-        throw new Error(result.error || "100件の一括登録に失敗しました。");
+        throw new Error(result.error || "200件の一括登録に失敗しました。");
       }
 
       await fetchComments(filterFlag);
@@ -321,7 +321,7 @@ export default function CommentsManager() {
             >
               {seeding
                 ? "処理中..."
-                : "DBをリセットして DB/seedData.ts の100件で入れ直す"}
+                : "DBをリセットして DB/seedData.ts の200件で入れ直す"}
             </button>
             <button
               type="button"
@@ -479,7 +479,7 @@ export default function CommentsManager() {
                     colSpan={5}
                     className="py-8 text-center text-zinc-500 dark:text-zinc-400"
                   >
-                    登録されている文章データがありません。上の「DBをリセットして DB/seedData.ts の100件で入れ直す」ボタンを押すか、新規追加してください。
+                    登録されている文章データがありません。上の「DBをリセットして DB/seedData.ts の200件で入れ直す」ボタンを押すか、新規追加してください。
                   </td>
                 </tr>
               ) : (
