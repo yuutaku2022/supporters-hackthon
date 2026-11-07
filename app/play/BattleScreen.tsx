@@ -16,7 +16,7 @@ type TimelineProps = {
   loadingMore: boolean;
   loadMoreError: string | null;
   onLoadMore: () => void;
-  onFinish: (pressed: string[]) => void | Promise<void>;
+  onFinish: (pressed: string[], maxSamePostStreak?: number) => void | Promise<void>;
   sending: boolean;
   error: string | null;
 };
@@ -70,6 +70,9 @@ export function BattleScreen(props: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const done = useRef(false);
   const hitSounds = useRef<Record<string, string>>({});
+  const lastPressedPostId = useRef<string | null>(null);
+  const currentSamePostStreak = useRef(0);
+  const maxSamePostStreak = useRef(0);
   const timelineRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
@@ -85,7 +88,7 @@ export function BattleScreen(props: Props) {
     if (questionMode) {
       void props.onFinish(pressed.map(Number), timeLeft);
     } else {
-      void props.onFinish(pressed);
+      void props.onFinish(pressed, maxSamePostStreak.current);
     }
   };
   const retryFinish = () => {
@@ -136,6 +139,16 @@ export function BattleScreen(props: Props) {
   }, [timeUp]);
 
   const press = async (postId: string) => {
+    if (lastPressedPostId.current === postId) {
+      currentSamePostStreak.current += 1;
+    } else {
+      lastPressedPostId.current = postId;
+      currentSamePostStreak.current = 1;
+    }
+    if (currentSamePostStreak.current > maxSamePostStreak.current) {
+      maxSamePostStreak.current = currentSamePostStreak.current;
+    }
+
     if (marks[postId]) {
       const src = hitSounds.current[postId];
       if (marks[postId] === 'hit' && src) playSe(src);
