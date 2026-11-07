@@ -9,6 +9,8 @@ export const BGM = {
 
 /** 冷笑ボタンがハズレだったときのブザー */
 export const MISS_SE = '/sounds/se/buzzer.mp3';
+export const RESULT_TYPING_SE = '/sounds/se/character-forwarding.mp3';
+export const TITLE_REVEAL_SE = '/sounds/se/rhythm-heaven-fever-ok-jingle-loud.mp3';
 
 /** 冷笑ボタンが当たりだったときに鳴る SE の候補。ここに足せば設定画面にも並ぶ */
 export const PRESS_SES = [
@@ -79,35 +81,174 @@ export function playRandomPressSe(): string | null {
   return src;
 }
 
-/** 冷笑ボタンの SE（当たり・ハズレ）を全部先に読み込む */
-export function preloadPressSes() {
-  for (const s of PRESS_SES) preloadSe(s.src);
-  preloadSe(MISS_SE);
+type ActiveSource = {
+  source: AudioBufferSourceNode;
+  gain: GainNode;
+};
+
+const decodedBuffers = new Map<string, AudioBuffer>();
+const bufferLoads = new Map<string, Promise<AudioBuffer | null>>();
+const activeSources = new Set<ActiveSource>();
+const MAX_ACTIVE_SOURCES = 6;
+let audioContext: AudioContext | null = null;
+let resumeTask: Promise<void> | null = null;
+let pendingPlayback: { buffer: AudioBuffer; volume: number } | null = null;
+
+function getAudioContext(): AudioContext | null {
+  if (typeof window === 'undefined' || !window.AudioContext) return null;
+  audioContext ??= new window.AudioContext();
+  return audioContext;
 }
 
-const seCache = new Map<string, HTMLAudioElement>();
-const activeSes = new Set<HTMLAudioElement>();
-
-/** SE を先に読み込んでおく（初回の再生が遅れないように） */
-export function preloadSe(src: string) {
-  if (typeof window === 'undefined' || seCache.has(src)) return;
-  const audio = new Audio(src);
-  audio.preload = 'auto';
-  seCache.set(src, audio);
+/** AudioContextをユーザー操作中に作成・再開し、iOSの再生制限を解除する */
+export function unlockAudio() {
+  void resumeAudioContext(true);
 }
 
-/** SE を1回鳴らす。連打しても前の音を切らずに重ねて鳴る */
+function resumeAudioContext(fromUserGesture = false): Promise<void> {
+  const context = getAudioContext();
+  if (!context || context.state === 'running') return Promise.resolve();
+  if (resumeTask && !fromUserGesture) return resumeTask;
+
+  const task = context.resume()
+    .then(() => {
+      if (context.state === 'running' && pendingPlayback) {
+        const pending = pendingPlayback;
+        pendingPlayback = null;
+        startBuffer(pending.buffer, pending.volume);
+      }
+    })
+    .catch((error: unknown) => {
+      pendingPlayback = null;
+      console.warn('効果音用の AudioContext を再開できませんでした', error);
+    })
+    .finally(() => {
+      if (resumeTask === task) resumeTask = null;
+    });
+  resumeTask = task;
+  return task;
+}
+
+/** 音声を取得・デコードしてキャッシュする。クリック時には未読込音声を待たない */
+export function preloadSe(src: string): Promise<AudioBuffer | null> {
+  const cached = decodedBuffers.get(src);
+  if (cached) return Promise.resolve(cached);
+  const existing = bufferLoads.get(src);
+  if (existing) return existing;
+
+  const context = getAudioContext();
+  if (!context) {
+    console.warn(`Web Audio API を利用できません。効果音を準備できませんでした: ${src}`);
+    return Promise.resolve(null);
+  }
+
+  const load = fetch(src)
+    .then((response) => {
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.arrayBuffer();
+    })
+    .then((data) => context.decodeAudioData(data))
+    .then((buffer) => {
+      decodedBuffers.set(src, buffer);
+      return buffer;
+    })
+    .catch((error: unknown) => {
+      bufferLoads.delete(src);
+      console.warn(`効果音を取得またはデコードできませんでした: ${src}`, error);
+      return null;
+    });
+  bufferLoads.set(src, load);
+  return load;
+}
+
+/** ゲーム内で選択中のSEとリザルト演出用SEを、ゲーム開始前に取得・デコードする */
+export async function preloadGameSounds() {
+  const selectedIds = loadPressSeIds();
+  const selectedSources = PRESS_SES
+    .filter((sound) => selectedIds.includes(sound.id))
+    .map((sound) => sound.src);
+  await Promise.all([
+    ...selectedSources,
+    MISS_SE,
+    RESULT_TYPING_SE,
+    TITLE_REVEAL_SE,
+  ].map(preloadSe));
+}
+
+/** 冷笑ボタンのSEを取得・デコードする */
+export async function preloadPressSes() {
+  const selectedIds = loadPressSeIds();
+  const selectedSources = PRESS_SES
+    .filter((sound) => selectedIds.includes(sound.id))
+    .map((sound) => sound.src);
+  await Promise.all([MISS_SE, ...selectedSources].map(preloadSe));
+}
+
+/** 設定画面の試聴ボタンで使う全SEを取得・デコードする */
+export async function preloadAllPressSes() {
+  await Promise.all([MISS_SE, ...PRESS_SES.map((sound) => sound.src)].map(preloadSe));
+}
+
+/** 事前デコード済みのSEを、再生ごとの独立ノードですぐ鳴らす */
 export function playSe(src: string, volume = 0.8) {
-  preloadSe(src);
-  const audio = new Audio(src);
-  audio.volume = volume;
-  const release = () => activeSes.delete(audio);
-  activeSes.add(audio);
-  audio.addEventListener('ended', release, { once: true });
-  audio.addEventListener('error', release, { once: true });
-  audio.play().catch((error: unknown) => {
-    release();
-    console.warn(`効果音を再生できませんでした: ${src}`, error);
+  const buffer = decodedBuffers.get(src);
+  if (!buffer) {
+    void preloadSe(src);
+    return;
+  }
+
+  const context = getAudioContext();
+  if (!context) return;
+  if (context.state !== 'running') {
+    pendingPlayback = { buffer, volume };
+    void resumeAudioContext();
+    return;
+  }
+  startBuffer(buffer, volume);
+}
+
+function startBuffer(buffer: AudioBuffer, volume: number) {
+  const context = audioContext;
+  if (!context || context.state !== 'running') return;
+
+  if (activeSources.size >= MAX_ACTIVE_SOURCES) {
+    const oldest = activeSources.values().next().value;
+    if (oldest) stopSource(oldest);
+  }
+
+  const source = context.createBufferSource();
+  const gain = context.createGain();
+  source.buffer = buffer;
+  gain.gain.value = volume;
+  source.connect(gain);
+  gain.connect(context.destination);
+  const active = { source, gain };
+  activeSources.add(active);
+  source.addEventListener('ended', () => {
+    activeSources.delete(active);
+    source.disconnect();
+    gain.disconnect();
+  }, { once: true });
+  source.start();
+}
+
+/** 再生中の効果音を止める（ゲーム終了・画面遷移時） */
+export function stopAllSe() {
+  pendingPlayback = null;
+  for (const active of activeSources) stopSource(active);
+}
+
+function stopSource(active: ActiveSource) {
+  active.gain.gain.setTargetAtTime(0, audioContext!.currentTime, 0.005);
+  active.source.stop(audioContext!.currentTime + 0.02);
+  activeSources.delete(active);
+}
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && audioContext?.state === 'suspended') {
+      void resumeAudioContext();
+    }
   });
 }
 

@@ -1,7 +1,8 @@
 'use client';
 
 import { PILL } from '@/app/play/styles';
-import { playSe, PRESS_SES, savePressSeIds, usePressSeIds, type PressSeId } from '@/lib/sound';
+import { useEffect } from 'react';
+import { playSe, preloadAllPressSes, PRESS_SES, savePressSeIds, unlockAudio, usePressSeIds, type PressSeId } from '@/lib/sound';
 
 /**
  * 冷笑ボタンが当たりだったときの SE を選ぶ設定パーツ。設定画面で使う。
@@ -9,6 +10,10 @@ import { playSe, PRESS_SES, savePressSeIds, usePressSeIds, type PressSeId } from
  */
 export function SeSettings() {
   const selected = usePressSeIds();
+
+  useEffect(() => {
+    void preloadAllPressSes();
+  }, []);
 
   const toggle = (id: PressSeId) =>
     savePressSeIds(selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id]);
@@ -37,7 +42,10 @@ export function SeSettings() {
             <button
               type="button"
               className={`${PILL} min-h-8 shrink-0 px-3 text-[13px]`}
-              onClick={() => playSe(se.src)}
+              onClick={() => {
+                unlockAudio();
+                playSe(se.src);
+              }}
               aria-label={`${se.label}を試しに鳴らす`}
             >
               ▶
