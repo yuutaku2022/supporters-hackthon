@@ -1,8 +1,8 @@
-import type { HintRequest, HintResponse, ScoreResponse, TimelineResponse } from '@/types/game';
+import type { HintRequest, HintResponse, ScoreResponse, TimelineCursor, TimelineResponse } from '@/types/game';
 
 /**
  * ブラウザから呼ぶ API（app/api/ の Route Handler）
- *   GET  /api/timeline?offset=...  タイムラインを50件ずつ取得
+ *   GET  /api/timeline             タイムラインを25件ずつ取得
  *   POST /api/score                時間切れのとき、押したポストからスコアを計算
  *   POST /api/hint                 まだ押していない冷笑ポストを1つ教える
  */
@@ -25,23 +25,37 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
-export async function fetchTimeline(postIds?: string[], signal?: AbortSignal): Promise<TimelineResponse> {
-  const params = new URLSearchParams(location.search);
-  params.delete('offset');
-  params.delete('postId');
-  postIds?.forEach((id) => params.append('postId', id));
-  const url = `/api/timeline?${params.toString()}`;
+export async function fetchTimeline(cursor?: TimelineCursor, signal?: AbortSignal): Promise<TimelineResponse> {
+  const params = new URLSearchParams();
+  if (cursor) {
+    params.set('offset', String(cursor.offset));
+    params.set('remaining', String(cursor.remaining));
+    params.set('total', String(cursor.total));
+  }
+  const query = params.size > 0 ? `?${params.toString()}` : '';
+  const url = `/api/timeline${query}`;
   const body = await request<TimelineResponse>(url, { signal });
   if (!Array.isArray(body.posts) || typeof body.hasMore !== 'boolean') {
     throw new ApiError('レスポンスに posts 配列または hasMore がありません');
   }
+  const pageCursor = body.cursor;
+  const validCursor =
+    pageCursor !== undefined &&
+    typeof pageCursor === 'object' &&
+    pageCursor !== null &&
+    Number.isSafeInteger(pageCursor.offset) &&
+    Number.isSafeInteger(pageCursor.remaining) &&
+    Number.isSafeInteger(pageCursor.total) &&
+    pageCursor.offset >= 0 &&
+    pageCursor.remaining >= 1 &&
+    pageCursor.total >= 1 &&
+    pageCursor.offset < pageCursor.total &&
+    pageCursor.remaining <= pageCursor.total;
   if (
-    postIds === undefined &&
-    (!Array.isArray(body.postIds) ||
-      body.postIds.some((id) => typeof id !== 'string') ||
-      new Set(body.postIds).size !== body.postIds.length)
+    body.hasMore !== (pageCursor !== undefined) ||
+    (pageCursor !== undefined && !validCursor)
   ) {
-    throw new ApiError('初回レスポンスの postIds 配列が不正です');
+    throw new ApiError('レスポンスのページカーソルが不正です');
   }
   const bad = body.posts.findIndex(
     (p) =>

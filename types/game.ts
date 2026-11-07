@@ -20,11 +20,17 @@ export type PublicQuestion = {
 };
 
 /** GET /api/timeline */
+export type TimelineCursor = {
+  offset: number;
+  remaining: number;
+  total: number;
+};
+
 export type TimelineResponse = {
   posts: PublicPost[];
   hasMore: boolean;
-  /** 初回レスポンスのみ。ゲーム中のランダムな投稿順を保持する */
-  postIds?: string[];
+  /** 追加ページがある場合の次カーソル */
+  cursor?: TimelineCursor;
 };
 
 export type QuestionsResponse = {

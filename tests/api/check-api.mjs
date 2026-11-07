@@ -35,11 +35,12 @@ try {
     Array.isArray(posts) &&
     posts.length > 0 &&
     posts.length <= 25 &&
-    Array.isArray(t.body?.postIds) &&
-    t.body.postIds.length >= posts.length &&
-    new Set(t.body.postIds).size === t.body.postIds.length &&
-    posts.every((p, index) => p.id === t.body.postIds[index]) &&
     typeof t.body?.hasMore === 'boolean' &&
+    t.body.hasMore === (t.body.cursor !== undefined) &&
+    (!t.body.cursor ||
+      (Number.isSafeInteger(t.body.cursor.offset) &&
+        Number.isSafeInteger(t.body.cursor.remaining) &&
+        Number.isSafeInteger(t.body.cursor.total))) &&
     posts.every((p) =>
       typeof p?.id === 'string' &&
       typeof p?.speaker === 'string' &&
@@ -49,15 +50,14 @@ try {
   const leaked = Array.isArray(posts) && posts.some((p) => 'monsterId' in p || 'explanation' in p);
   report(shapeOk && !leaked, 'timeline', `HTTP ${t.res.status}  ${t.ms}ms  ${Array.isArray(posts) ? `${posts.length}件` : t.text.slice(0, 80)}${leaked ? '  不要な情報が返っている' : ''}`);
 
-  const invalidPostId = await call('/timeline?postId=');
-  report(invalidPostId.res.status === 400, 'invalid post ID', `HTTP ${invalidPostId.res.status}  ${invalidPostId.ms}ms`);
+  const invalidCursor = await call('/timeline?offset=1');
+  report(invalidCursor.res.status === 400, 'invalid cursor', `HTTP ${invalidCursor.res.status}  ${invalidCursor.ms}ms`);
 
   if (shapeOk) {
     const ids = posts.map((p) => p.id);
-    if (t.body.hasMore) {
-      const nextIds = t.body.postIds.slice(25, 51);
-      const nextParams = new URLSearchParams();
-      nextIds.forEach((id) => nextParams.append('postId', id));
+    let cursor = t.body.cursor;
+    for (let pageNumber = 2; cursor && pageNumber <= 3; pageNumber++) {
+      const nextParams = new URLSearchParams(cursor);
       const next = await call(`/timeline?${nextParams}`);
       const nextPosts = next.body?.posts;
       const nextOk =
@@ -65,7 +65,6 @@ try {
         Array.isArray(nextPosts) &&
         nextPosts.length <= 25 &&
         typeof next.body?.hasMore === 'boolean' &&
-        nextPosts.every((p, index) => p.id === nextIds[index]) &&
         nextPosts.every((p) =>
           typeof p?.id === 'string' &&
           typeof p?.speaker === 'string' &&
@@ -73,7 +72,10 @@ try {
           typeof p?.cold === 'boolean'
         ) &&
         !nextPosts.some((p) => ids.includes(p.id));
-      report(nextOk, 'timeline pagination', `HTTP ${next.res.status}  ${next.ms}ms  ${Array.isArray(nextPosts) ? `${nextPosts.length}件` : next.text.slice(0, 80)}`);
+      report(nextOk, `timeline page ${pageNumber}`, `HTTP ${next.res.status}  ${next.ms}ms  ${Array.isArray(nextPosts) ? `${nextPosts.length}件` : next.text.slice(0, 80)}`);
+      if (!nextOk) break;
+      ids.push(...nextPosts.map((p) => p.id));
+      cursor = next.body.cursor;
     }
 
     const s = await call('/score', { method: 'POST', body: JSON.stringify({ pressed: ids.slice(0, 3), timeline: ids }) });
