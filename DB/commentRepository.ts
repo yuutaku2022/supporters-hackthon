@@ -107,6 +107,19 @@ export async function getComments(
   return records;
 }
 
+export async function getCommentsCount(): Promise<number> {
+  const supabase = getSupabaseServerClient();
+  const { count, error } = await supabase
+    .from(TABLE_NAME)
+    .select("id", { count: "exact", head: true });
+
+  if (error) {
+    throw new Error(`DBの文章件数取得に失敗しました: ${error.message}`);
+  }
+
+  return count ?? 0;
+}
+
 /**
  * 指定した ID の文章を取得します。大きな ID 配列は分割し、DB の応答上限を超えないようにします。
  */

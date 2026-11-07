@@ -4,8 +4,8 @@ import { useRouter } from 'next/navigation';
 import { BGM, useBgm } from '@/lib/sound';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { evaluateAchievement } from '@/DB/achievement';
-import { TIME_LIMIT, TIMELINE_PAGE_SIZE } from '@/features/game/rules';
-import type { PublicPost } from '@/types/game';
+import { TIME_LIMIT } from '@/features/game/rules';
+import type { PublicPost, TimelineCursor } from '@/types/game';
 import { ApiError, fetchTimeline, postScore } from './api';
 import { BattleLoading } from './BattleLoading';
 import { BattleScreen } from './BattleScreen';
@@ -24,13 +24,11 @@ export function BattleGame() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [posts, setPosts] = useState<PublicPost[] | null>(null);
   const [hasMore, setHasMore] = useState(false);
+  const [cursor, setCursor] = useState<TimelineCursor | undefined>();
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
-  const nextIndex = useRef(0);
-  const postOrder = useRef<string[]>([]);
-  const seenPostIds = useRef(new Set<string>());
   const fetchingMore = useRef(false);
   const paginationController = useRef<AbortController | null>(null);
 
@@ -43,11 +41,9 @@ export function BattleGame() {
       .then((page) => {
         if (ctrl.signal.aborted) return;
         if (page.posts.length === 0) throw new ApiError('投稿がまだ登録されていません');
-        postOrder.current = page.postIds ?? [];
-        seenPostIds.current = new Set(page.posts.map((post) => post.id));
-        nextIndex.current = page.posts.length;
         setPosts(page.posts);
         setHasMore(page.hasMore);
+        setCursor(page.cursor);
       })
       .catch((e: Error) => {
         if (!ctrl.signal.aborted) setLoadError(e.message);
@@ -56,27 +52,18 @@ export function BattleGame() {
   }, [attempt]);
 
   const loadMore = useCallback(async () => {
-    if (!hasMore || fetchingMore.current) return;
+    if (!hasMore || !cursor || fetchingMore.current) return;
     fetchingMore.current = true;
     setLoadingMore(true);
     setLoadMoreError(null);
     const ctrl = new AbortController();
     paginationController.current = ctrl;
-    const requestedIds = postOrder.current.slice(
-      nextIndex.current,
-      nextIndex.current + TIMELINE_PAGE_SIZE + 1,
-    );
     try {
-      const page = await fetchTimeline(requestedIds, ctrl.signal);
+      const page = await fetchTimeline(cursor, ctrl.signal);
       if (ctrl.signal.aborted) return;
-      nextIndex.current += Math.min(TIMELINE_PAGE_SIZE, requestedIds.length);
-      const newPosts = page.posts.filter((post) => {
-        if (seenPostIds.current.has(post.id)) return false;
-        seenPostIds.current.add(post.id);
-        return true;
-      });
-      setPosts((current) => (current ? [...current, ...newPosts] : newPosts));
+      setPosts((current) => (current ? [...current, ...page.posts] : page.posts));
       setHasMore(page.hasMore);
+      setCursor(page.cursor);
     } catch (e) {
       if (!ctrl.signal.aborted) setLoadMoreError((e as Error).message);
     } finally {
@@ -86,20 +73,18 @@ export function BattleGame() {
         setLoadingMore(false);
       }
     }
-  }, [hasMore]);
+  }, [cursor, hasMore]);
 
   /** ゲームを捨てて、新しいタイムラインで最初から */
   const reset = () => {
     setPosts(null);
     setHasMore(false);
+    setCursor(undefined);
     setLoadingMore(false);
     setLoadMoreError(null);
     setLoadError(null);
     setSending(false);
     setFinishError(null);
-    nextIndex.current = 0;
-    postOrder.current = [];
-    seenPostIds.current.clear();
     paginationController.current?.abort();
     paginationController.current = null;
     fetchingMore.current = false;
