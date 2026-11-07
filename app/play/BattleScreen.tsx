@@ -74,7 +74,8 @@ export function BattleScreen(props: Props) {
   const timeLeft = timer.limit === timeLimit ? timer.remaining : timeLimit;
   const [menuOpen, setMenuOpen] = useState(false);
   const done = useRef(false);
-  const hitSounds = useRef<Record<string, string>>({});
+  /** 見抜いた後に「うおっw」を押した回数（押すたびに動きをやり直すために使う） */
+  const [hitTaps, setHitTaps] = useState<Record<string, number>>({});
   const timelineRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
@@ -146,8 +147,11 @@ export function BattleScreen(props: Props) {
 
   const press = async (postId: string, answer: Answer = 'cold') => {
     if (marks[postId]) {
-      const src = hitSounds.current[postId];
-      if (marks[postId] === 'hit' && src) playSe(src);
+      // 見抜いた後の「うおっw」は連打できる：押すたびにランダムな声と「ぽん」の動き（点数は増えない）
+      if (marks[postId] === 'hit' && !busy) {
+        playRandomPressSe();
+        setHitTaps((t) => ({ ...t, [postId]: (t[postId] ?? 0) + 1 }));
+      }
       return;
     }
     if (checking !== null || busy) return;
@@ -156,8 +160,7 @@ export function BattleScreen(props: Props) {
       if (post) {
         const correct = answer === 'cold' ? post.cold : !post.cold;
         if (correct && answer === 'cold') {
-          const src = playRandomPressSe();
-          if (src) hitSounds.current[postId] = src;
+          playRandomPressSe();
         } else if (!correct) {
           playSe(MISS_SE);
         }
@@ -172,8 +175,7 @@ export function BattleScreen(props: Props) {
     try {
       const cold = (await props.onCheck(Number(postId), pressed.map(Number))).cold;
       if (cold) {
-        const src = playRandomPressSe();
-        if (src) hitSounds.current[postId] = src;
+        playRandomPressSe();
       } else {
         playSe(MISS_SE);
       }
@@ -230,6 +232,7 @@ export function BattleScreen(props: Props) {
             seed={post.id}
             minutesAgo={(i + 1) * 3}
             mark={marks[post.id]}
+            taps={hitTaps[post.id] ?? 0}
             checking={checking === post.id}
             disabled={busy || checking !== null}
             canAnswerNotCold={!questionMode}
@@ -335,6 +338,8 @@ type PostProps = {
   seed: string;
   minutesAgo: number;
   mark: Mark | undefined;
+  /** 見抜いた後に「うおっw」を押した回数 */
+  taps: number;
   checking: boolean;
   disabled: boolean;
   /** 「冷笑じゃない」ボタンを出すか（旧・問題形式では出さない） */
@@ -347,7 +352,7 @@ const ANSWER_BASE =
   'flex min-h-12 items-center justify-center gap-1.5 rounded-full border px-4 text-[17px] font-extrabold whitespace-nowrap focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-x-blue';
 
 /** タイムラインのポスト1件。本文の下に「冷笑」「冷笑じゃない」のボタン（押すとその場で判定、取り消しはできない） */
-function Post({ post, seed, minutesAgo, mark, checking, disabled, canAnswerNotCold, onPress }: PostProps) {
+function Post({ post, seed, minutesAgo, mark, taps, checking, disabled, canAnswerNotCold, onPress }: PostProps) {
   const name = displayName(post.speaker);
   const stats = fakeStats(seed);
   return (
@@ -385,12 +390,15 @@ function Post({ post, seed, minutesAgo, mark, checking, disabled, canAnswerNotCo
           {mark === 'hit' ? (
             <button
               type="button"
-              aria-label="正解音をもう一度再生"
+              aria-label="もう一度「うおっw」（連打できます）"
               disabled={disabled}
               onClick={() => onPress('cold')}
-              className={`${ANSWER_BASE} ml-auto cursor-pointer border-x-pink bg-x-pink px-5 text-white animate-pop motion-reduce:animate-none disabled:cursor-not-allowed`}
+              className={`${ANSWER_BASE} ml-auto cursor-pointer border-x-pink bg-x-pink px-5 text-white select-none animate-pop motion-reduce:animate-none active:scale-95 disabled:cursor-not-allowed`}
             >
-              うおっw
+              {/* 押すたびに key が変わって「ぽん」の動きがやり直しになる */}
+              <span key={taps} className={`inline-block ${taps ? 'hit-bump' : ''}`}>
+                うおっw
+              </span>
             </button>
           ) : mark === 'safe' ? (
             <span className={`${ANSWER_BASE} ml-auto border-x-blue bg-x-blue px-5 text-white animate-pop motion-reduce:animate-none`} role="status">
