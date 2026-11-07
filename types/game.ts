@@ -46,6 +46,8 @@ export type CheckResponse = {
 export type ScoreRequest = {
   /** 「冷笑」を押したポストの id（当たり・ハズレとも） */
   pressed: string[];
+  /** 「冷笑じゃない」を押したポストの id（当たり・ハズレとも）。省略時は無し */
+  notCold?: string[];
   /** 出題されたタイムラインのポスト ID */
   timeline?: string[];
 };
