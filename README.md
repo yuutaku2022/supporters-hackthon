@@ -89,6 +89,7 @@ supporters-hackthon/
 │   ├── start/page.tsx          # 旧スタートURLから/へのリダイレクト
 │   ├── play/page.tsx           # ゲーム画面（/play）
 │   ├── result/page.tsx         # 結果画面（/result）
+│   ├── ranking/page.tsx        # ランキング画面（/ranking）
 │   ├── globals.css             # 全体のスタイル（作成済み）
 │   ├── not-found.tsx           # 404ページ（必要になったら追加）
 │   ├── error.tsx               # エラー画面（必要になったら追加）
@@ -122,7 +123,9 @@ supporters-hackthon/
 
 ### 画面遷移
 
-スタート画面（`/`）からゲーム画面（`/play`）へ進み、ゲーム終了後に結果画面（`/result?score=合計点`）を表示します。結果画面からはスタート画面へ戻れます。
+スタート画面（`/`）からゲーム画面（`/play`）へ進み、ゲーム終了後に結果画面（`/result?score=合計点`）を表示します。結果画面からランキングに名前とスコアを登録でき、スタート画面右上の王冠ボタンからランキング（`/ranking`）を確認できます。
+
+ランキングを使う場合は、`DB/migrations/20261107000000_create_rankings_table.sql` を Supabase に適用してください。
 
 ### 配置のルール
 

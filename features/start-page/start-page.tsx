@@ -15,10 +15,31 @@ export function StartPage() {
   return (
     <XPhone>
       <div className="flex grow flex-col px-7 pt-8 pb-[calc(24px+env(safe-area-inset-bottom))]">
-        {/* ゲーム名（最後の w だけピンク） */}
-        <p className="text-xl font-extrabold tracking-tight">
-          ちょっ，おま<span className="text-x-pink">w</span>
-        </p>
+        <div className="flex items-center justify-between">
+          {/* ゲーム名（最後の w だけピンク） */}
+          <p className="text-xl font-extrabold tracking-tight">
+            ちょっ，おま<span className="text-x-pink">w</span>
+          </p>
+          <Link
+            href="/ranking"
+            aria-label="ランキングを見る"
+            className="grid size-10 place-items-center rounded-full border border-x-line text-x-text transition-colors hover:bg-x-text/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-x-blue"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="size-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m6 8 3.5 2L12 5l2.5 5L18 8l-1.5 9h-9L6 8Z" />
+              <path d="M8 14h8" />
+            </svg>
+          </Link>
+        </div>
 
         {/* 冷笑ワードのタグが3段で横に流れる帯（画面の端から端まで） */}
         <div className="pointer-events-none -mx-7 mt-6 flex flex-col gap-3 opacity-40 select-none" aria-hidden="true">
