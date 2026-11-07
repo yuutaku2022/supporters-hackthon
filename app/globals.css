@@ -51,6 +51,7 @@ body {
   --animate-shake: shake 0.35s ease-in-out;
   --animate-pop: pop 0.45s ease-out both;
   --animate-rise: rise 0.3s ease-out both;
+  --animate-title-reveal: title-reveal 0.85s cubic-bezier(0.16, 1.6, 0.3, 1) both;
   --animate-x-hint: x-hint 1s ease-in-out infinite;
 
   @keyframes shake {
@@ -66,6 +67,13 @@ body {
   @keyframes rise {
     from { transform: translateY(16px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
+  }
+  @keyframes title-reveal {
+    0% { transform: scale(0.35) translateY(64px) rotate(-8deg); opacity: 0; filter: blur(8px); }
+    55% { transform: scale(1.14) translateY(-10px) rotate(3deg); opacity: 1; filter: blur(0); }
+    75% { transform: scale(0.94) translateY(3px) rotate(-1deg); }
+    90% { transform: scale(1.04) translateY(-2px) rotate(0.5deg); }
+    100% { transform: scale(1) translateY(0) rotate(0); opacity: 1; filter: blur(0); }
   }
   @keyframes x-hint {
     0%, 100% { background: transparent; }
