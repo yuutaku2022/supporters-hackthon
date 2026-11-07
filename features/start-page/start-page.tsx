@@ -50,7 +50,7 @@ export function StartPage() {
           <span className="bg-linear-to-r from-[#9be7ff] to-x-blue bg-clip-text text-transparent">冷えて</span>ない？
         </h1>
         <p className="mt-4 text-[16px] leading-relaxed text-x-sub">
-          タイムラインにまぎれた<strong className="text-x-text">冷笑投稿</strong>を見つけて、押して、見抜こう。
+          タイムラインにまぎれた<strong className="text-x-text">冷笑</strong>を見抜こう。
         </p>
 
         <div className="grow" />
