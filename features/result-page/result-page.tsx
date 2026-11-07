@@ -53,7 +53,127 @@ function XLogo({ className = "size-4" }: { className?: string }) {
   );
 }
 
-function Conversation({ onReplay, score, achievement }: ConversationProps) {
+type RankingDialogProps = {
+  score: number;
+  resultId: string;
+  onClose: () => void;
+  onRegistered: () => void;
+};
+
+function RankingDialog({
+  score,
+  resultId,
+  onClose,
+  onRegistered,
+}: RankingDialogProps) {
+  const [name, setName] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const trimmedName = name.trim();
+    if (!trimmedName || submitting) return;
+
+    setSubmitting(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/rankings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmedName, score, resultId }),
+      });
+      const body = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(
+          typeof body?.error === "string"
+            ? body.error
+            : "ランキングに登録できませんでした。",
+        );
+      }
+      onRegistered();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "通信に失敗しました。");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-5"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="ranking-dialog-title"
+        className="w-full max-w-[390px] rounded-2xl border border-white/15 bg-[#1b1b20] p-5 shadow-2xl"
+      >
+        <div className="flex items-center justify-between">
+          <h2 id="ranking-dialog-title" className="text-lg font-bold">
+            ランキングに登録
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="閉じる"
+            className="grid size-9 place-items-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"
+          >
+            <span aria-hidden="true">×</span>
+          </button>
+        </div>
+        <p className="mt-2 text-sm text-white/70">
+          スコア {score.toLocaleString("ja-JP")} 点で登録します。
+        </p>
+        <form onSubmit={submit} className="mt-5">
+          <label htmlFor="ranking-name" className="text-sm font-semibold">
+            名前
+          </label>
+          <input
+            id="ranking-name"
+            autoFocus
+            required
+            maxLength={20}
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="ランキングに表示する名前"
+            className="mt-2 min-h-12 w-full rounded-xl border border-white/20 bg-black/30 px-3 text-white outline-none placeholder:text-white/40 focus:border-[#1d9bf0]"
+          />
+          {error && (
+            <p role="alert" className="mt-2 text-sm text-[#ff6b78]">
+              {error}
+            </p>
+          )}
+          <button
+            type="submit"
+            disabled={submitting || !name.trim()}
+            className="mt-5 flex min-h-12 w-full items-center justify-center rounded-full bg-[#1d9bf0] font-bold text-white transition-colors hover:bg-[#1685cf] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {submitting ? "登録中..." : "登録する"}
+          </button>
+        </form>
+      </section>
+    </div>
+  );
+}
+
+function Conversation({
+  onReplay,
+  score,
+  achievement,
+  resultId,
+}: ConversationProps & { resultId: string }) {
   const answerScore = score.toLocaleString("ja-JP");
   const titleText = achievement?.title ?? "なし";
   const hasAchievement = achievement !== null;
@@ -63,6 +183,8 @@ function Conversation({ onReplay, score, achievement }: ConversationProps) {
   const [stage, setStage] = useState<
     "typing-question" | "thinking" | "typing-answer" | "revealing-title" | "done"
   >("typing-question");
+  const [isRankingDialogOpen, setIsRankingDialogOpen] = useState(false);
+  const [isRegistered, setIsRegistered] = useState(false);
 
   useEffect(() => {
     let timer: number;
@@ -252,6 +374,27 @@ function Conversation({ onReplay, score, achievement }: ConversationProps) {
       <footer className="flex shrink-0 flex-col gap-3 border-t border-white/10 px-5 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <button
           type="button"
+          onClick={() => setIsRankingDialogOpen(true)}
+          disabled={isRegistered}
+          className="flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-[#1d9bf0] text-sm font-bold text-[#1d9bf0] transition-colors hover:bg-[#1d9bf0]/10 disabled:cursor-default disabled:border-white/20 disabled:text-white/60"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            className="size-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m3 7 5 3 4-6 4 6 5-3-2 12H5L3 7Z" />
+            <path d="M7 15h10" />
+          </svg>
+          <span>{isRegistered ? "ランキング登録済み" : "ランキングに登録"}</span>
+        </button>
+        <button
+          type="button"
           onClick={handleShareToX}
           className="flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-white text-sm font-bold text-black transition-colors hover:bg-white/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none"
         >
@@ -265,6 +408,17 @@ function Conversation({ onReplay, score, achievement }: ConversationProps) {
           スタート画面に戻る
         </Link>
       </footer>
+      {isRankingDialogOpen && (
+        <RankingDialog
+          score={score}
+          resultId={resultId}
+          onClose={() => setIsRankingDialogOpen(false)}
+          onRegistered={() => {
+            setIsRegistered(true);
+            setIsRankingDialogOpen(false);
+          }}
+        />
+      )}
     </main>
   );
 }
@@ -286,6 +440,7 @@ export function ResultPage({
       onReplay={() => setConversationKey((key) => key + 1)}
       score={score}
       achievement={achievement}
+      resultId={resultId}
     />
   );
 }

@@ -2,7 +2,7 @@
 //   npm run api:check                               → http://localhost:3000/api（npm run dev 中に実行）
 //   npm run api:check -- https://xxx.vercel.app/api → Preview / Production を確認
 // GET {base}/timeline を叩いてランダムページングとレスポンスの形を確認する。
-// あわせて score / hint が返るかも確認する。
+// あわせて score / hint とランキング登録の入力検証も確認する。
 
 const base = (process.argv[2] || 'http://localhost:3000/api').replace(/\/$/, '');
 
@@ -28,6 +28,12 @@ const report = (ok, label, detail) => {
 
 console.log(`API: ${base}\n`);
 try {
+  const invalidRanking = await call('/rankings', {
+    method: 'POST',
+    body: JSON.stringify({ name: '', score: 1, resultId: 'invalid' }),
+  });
+  report(invalidRanking.res.status === 400, 'invalid ranking entry', `HTTP ${invalidRanking.res.status}  ${invalidRanking.ms}ms`);
+
   const t = await call('/timeline');
   const posts = t.body?.posts;
   const shapeOk =
