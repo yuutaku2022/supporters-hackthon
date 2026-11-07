@@ -56,8 +56,9 @@ export async function fetchTimeline(postIds?: string[], signal?: AbortSignal): P
   return body;
 }
 
-export const postScore = (pressed: string[], timeline: string[]) =>
-  request<ScoreResponse>('/api/score', { method: 'POST', body: JSON.stringify({ pressed, timeline }) });
+/** pressed は「冷笑」、notCold は「冷笑じゃない」を押したポスト */
+export const postScore = (pressed: string[], timeline: string[], notCold: string[] = []) =>
+  request<ScoreResponse>('/api/score', { method: 'POST', body: JSON.stringify({ pressed, notCold, timeline }) });
 
 export const postHint = (req: HintRequest) =>
   request<HintResponse>('/api/hint', { method: 'POST', body: JSON.stringify(req) });

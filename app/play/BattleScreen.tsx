@@ -16,7 +16,8 @@ type TimelineProps = {
   loadingMore: boolean;
   loadMoreError: string | null;
   onLoadMore: () => void;
-  onFinish: (pressed: string[]) => void | Promise<void>;
+  /** 時間切れ。pressed は「冷笑」、notCold は「冷笑じゃない」を押したポスト */
+  onFinish: (pressed: string[], notCold: string[]) => void | Promise<void>;
   sending: boolean;
   error: string | null;
 };
@@ -42,13 +43,16 @@ type QuestionProps = {
 
 type Props = TimelineProps | QuestionProps;
 
-type Mark = 'hit' | 'miss';
+/** 押したボタン */
+type Answer = 'cold' | 'notCold';
+/** 判定結果：hit＝冷笑を見抜いた、safe＝冷笑じゃないを当てた、miss＝ハズレ */
+type Mark = 'hit' | 'safe' | 'miss';
 type DisplayPost = Pick<PublicPost, 'id' | 'speaker' | 'text'> & { cold?: boolean };
 
 /**
  * ゲーム画面（X のタイムライン風）
- * 1本の長いタイムラインをスクロールしながら、冷笑していると思うポストの「冷笑」を押す。その場で当たり／ハズレが出る。
- * 制限時間内にできるだけ多く見つける。時間切れで終わり。
+ * 1本の長いタイムラインをスクロールしながら、投稿ごとに「冷笑」か「冷笑じゃない」を押す。その場で正解／ハズレが出る。
+ * 制限時間内にできるだけ多く判定する。時間切れで終わり。
  * ゲームをやり直すときは key を変えて作り直す前提（状態・タイマーをリセットするため）。
  */
 export function BattleScreen(props: Props) {
@@ -63,6 +67,7 @@ export function BattleScreen(props: Props) {
   const onLoadMore = timelineProps?.onLoadMore;
   const { sending, error, timeLimit } = props;
   const [marks, setMarks] = useState<Record<string, Mark>>({});
+  const [answers, setAnswers] = useState<Record<string, Answer>>({});
   const [checking, setChecking] = useState<string | null>(null);
   const [checkError, setCheckError] = useState<string | null>(null);
   const [timer, setTimer] = useState(() => ({ limit: timeLimit, remaining: timeLimit }));
@@ -73,9 +78,13 @@ export function BattleScreen(props: Props) {
   const timelineRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  const pressed = Object.keys(marks);
-  const hitCount = pressed.filter((id) => marks[id] === 'hit').length;
-  const missCount = pressed.length - hitCount;
+  const answered = Object.keys(marks);
+  /** 「冷笑」を押したポスト（当たり・ハズレとも） */
+  const pressed = answered.filter((id) => answers[id] === 'cold');
+  /** 「冷笑じゃない」を押したポスト（当たり・ハズレとも） */
+  const notCold = answered.filter((id) => answers[id] === 'notCold');
+  const hitCount = answered.filter((id) => marks[id] !== 'miss').length;
+  const missCount = answered.length - hitCount;
   const timeUp = timeLeft === 0;
   const busy = sending || timeUp;
 
@@ -85,7 +94,7 @@ export function BattleScreen(props: Props) {
     if (questionMode) {
       void props.onFinish(pressed.map(Number), timeLeft);
     } else {
-      void props.onFinish(pressed);
+      void props.onFinish(pressed, notCold);
     }
   };
   const retryFinish = () => {
@@ -135,7 +144,7 @@ export function BattleScreen(props: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeUp]);
 
-  const press = async (postId: string) => {
+  const press = async (postId: string, answer: Answer = 'cold') => {
     if (marks[postId]) {
       const src = hitSounds.current[postId];
       if (marks[postId] === 'hit' && src) playSe(src);
@@ -145,13 +154,15 @@ export function BattleScreen(props: Props) {
     if (!('question' in props)) {
       const post = props.posts.find((item) => item.id === postId);
       if (post) {
-        if (post.cold) {
+        const correct = answer === 'cold' ? post.cold : !post.cold;
+        if (correct && answer === 'cold') {
           const src = playRandomPressSe();
           if (src) hitSounds.current[postId] = src;
-        } else {
+        } else if (!correct) {
           playSe(MISS_SE);
         }
-        setMarks((m) => ({ ...m, [postId]: post.cold ? 'hit' : 'miss' }));
+        setAnswers((a) => ({ ...a, [postId]: answer }));
+        setMarks((m) => ({ ...m, [postId]: !correct ? 'miss' : answer === 'cold' ? 'hit' : 'safe' }));
       }
       return;
     }
@@ -166,6 +177,7 @@ export function BattleScreen(props: Props) {
       } else {
         playSe(MISS_SE);
       }
+      setAnswers((a) => ({ ...a, [postId]: 'cold' }));
       setMarks((m) => ({ ...m, [postId]: cold ? 'hit' : 'miss' }));
     } catch {
       setCheckError('判定できませんでした。もう一度押してください');
@@ -208,7 +220,7 @@ export function BattleScreen(props: Props) {
 
       <div ref={timelineRef} className="min-h-0 grow overflow-y-auto">
         <p className="border-b border-x-line px-4 py-2.5 text-center text-sm text-x-sub">
-          時間内に<strong className="text-x-pink">冷笑している投稿</strong>をできるだけ見つけよう
+          投稿ごとに<strong className="text-x-pink">冷笑</strong>か<strong className="text-x-blue">冷笑じゃない</strong>かを見抜こう
         </p>
 
         {posts.map((post, i) => (
@@ -220,7 +232,8 @@ export function BattleScreen(props: Props) {
             mark={marks[post.id]}
             checking={checking === post.id}
             disabled={busy || checking !== null}
-            onPress={() => press(post.id)}
+            canAnswerNotCold={!questionMode}
+            onPress={(answer) => press(post.id, answer)}
           />
         ))}
 
@@ -324,17 +337,29 @@ type PostProps = {
   mark: Mark | undefined;
   checking: boolean;
   disabled: boolean;
-  onPress: () => void;
+  /** 「冷笑じゃない」ボタンを出すか（旧・問題形式では出さない） */
+  canAnswerNotCold: boolean;
+  onPress: (answer: Answer) => void;
 };
 
-/** タイムラインのポスト1件。アクションバーの右端が「冷笑」ボタン（押すとその場で判定、取り消しはできない） */
-function Post({ post, seed, minutesAgo, mark, checking, disabled, onPress }: PostProps) {
+/** 判定ボタン・判定結果の共通の形 */
+const ANSWER_BASE =
+  'flex min-h-12 items-center justify-center gap-1.5 rounded-full border px-4 text-[17px] font-extrabold whitespace-nowrap focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-x-blue';
+
+/** タイムラインのポスト1件。本文の下に「冷笑」「冷笑じゃない」のボタン（押すとその場で判定、取り消しはできない） */
+function Post({ post, seed, minutesAgo, mark, checking, disabled, canAnswerNotCold, onPress }: PostProps) {
   const name = displayName(post.speaker);
   const stats = fakeStats(seed);
   return (
     <article
       className={`flex gap-2.5 border-b border-x-line px-4 py-3 transition-colors ${
-        mark === 'hit' ? 'bg-x-pink/10 shadow-[inset_3px_0_0_var(--color-x-pink)]' : mark === 'miss' ? 'opacity-50' : ''
+        mark === 'hit'
+          ? 'bg-x-pink/10 shadow-[inset_3px_0_0_var(--color-x-pink)]'
+          : mark === 'safe'
+            ? 'bg-x-blue/10 shadow-[inset_3px_0_0_var(--color-x-blue)]'
+            : mark === 'miss'
+              ? 'opacity-50'
+              : ''
       }`}
     >
       <Avatar seed={post.speaker} letter={name} />
@@ -347,40 +372,59 @@ function Post({ post, seed, minutesAgo, mark, checking, disabled, onPress }: Pos
         </div>
         <p className="mt-0.5 leading-relaxed wrap-anywhere whitespace-pre-wrap">{post.text}</p>
 
-        {/* 返信・リポスト・いいね・表示数（飾り）＋ 冷笑ボタン */}
-        <div className="mt-2 flex items-center justify-between text-[13px] text-x-sub">
+        {/* 返信・リポスト・いいね・表示数（飾り） */}
+        <div className="mt-2 flex max-w-[340px] items-center justify-between text-[13px] text-x-sub">
           <Stat icon={ICONS.reply} value={stats.replies} />
           <Stat icon={ICONS.repost} value={stats.reposts} />
           <Stat icon={ICONS.like} value={stats.likes} />
-          <Stat icon={ICONS.views} value={stats.views} className="max-[399px]:hidden" />
+          <Stat icon={ICONS.views} value={stats.views} />
+        </div>
+
+        {/* 判定：「冷笑」「冷笑じゃない」（押した後は結果） */}
+        <div className="mt-2.5 flex gap-2">
           {mark === 'hit' ? (
             <button
               type="button"
               aria-label="正解音をもう一度再生"
               disabled={disabled}
-              onClick={onPress}
-              className="flex min-h-12 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-x-pink bg-x-pink px-5 text-[17px] font-extrabold whitespace-nowrap text-white animate-pop motion-reduce:animate-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-x-blue disabled:cursor-not-allowed"
+              onClick={() => onPress('cold')}
+              className={`${ANSWER_BASE} ml-auto cursor-pointer border-x-pink bg-x-pink px-5 text-white animate-pop motion-reduce:animate-none disabled:cursor-not-allowed`}
             >
               うおっw
             </button>
+          ) : mark === 'safe' ? (
+            <span className={`${ANSWER_BASE} ml-auto border-x-blue bg-x-blue px-5 text-white animate-pop motion-reduce:animate-none`} role="status">
+              セーフ
+            </span>
           ) : mark === 'miss' ? (
-            <span
-              className="flex min-h-12 shrink-0 items-center gap-1.5 rounded-full border border-x-line bg-x-line px-5 text-[17px] font-extrabold whitespace-nowrap text-x-text animate-shake motion-reduce:animate-none"
-              role="status"
-            >
+            <span className={`${ANSWER_BASE} ml-auto border-x-line bg-x-line px-5 text-x-text animate-shake motion-reduce:animate-none`} role="status">
               ハズレ
             </span>
           ) : (
-            <button
-              type="button"
-              aria-label="冷笑だと思う"
-              disabled={disabled}
-              onClick={onPress}
-              className="flex min-h-12 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-x-line bg-transparent px-5 text-[17px] font-extrabold whitespace-nowrap text-x-sub transition-colors hover:enabled:border-x-pink hover:enabled:text-x-pink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-x-blue disabled:cursor-not-allowed"
-            >
-              <IceIcon />
-              {checking ? '…' : '冷笑'}
-            </button>
+            <>
+              <button
+                type="button"
+                aria-label="冷笑だと思う"
+                disabled={disabled}
+                onClick={() => onPress('cold')}
+                className={`${ANSWER_BASE} flex-1 cursor-pointer border-x-line bg-transparent text-x-sub transition-colors hover:enabled:border-x-pink hover:enabled:text-x-pink disabled:cursor-not-allowed`}
+              >
+                <IceIcon />
+                {checking ? '…' : '冷笑'}
+              </button>
+              {canAnswerNotCold && (
+                <button
+                  type="button"
+                  aria-label="冷笑じゃないと思う"
+                  disabled={disabled}
+                  onClick={() => onPress('notCold')}
+                  className={`${ANSWER_BASE} flex-1 cursor-pointer border-x-line bg-transparent text-x-sub transition-colors hover:enabled:border-x-blue hover:enabled:text-x-blue disabled:cursor-not-allowed`}
+                >
+                  <SunIcon />
+                  冷笑じゃない
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -475,6 +519,16 @@ function Stat({ icon, value, className = '' }: { icon: string; value: string; cl
       </svg>
       {value}
     </span>
+  );
+}
+
+/** 冷笑じゃないボタンのアイコン（あたたかい＝太陽） */
+function SunIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4" />
+    </svg>
   );
 }
 
