@@ -35,7 +35,7 @@ export function BattleGame() {
   const paginationController = useRef<AbortController | null>(null);
 
   // /play にいる間ずっと BGM を流す（読み込み中・やり直し中も途切れない）。結果画面などへ移ると止まる
-  useBgm(BGM.battle);
+  useBgm(BGM.battle, 0.3);
 
   useEffect(() => {
     const ctrl = new AbortController();
