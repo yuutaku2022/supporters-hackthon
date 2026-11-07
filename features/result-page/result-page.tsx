@@ -3,11 +3,15 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { AchievementDefinition } from "@/DB/achievement";
+import { playSe, preloadSe } from "@/lib/sound";
 
 const question = "＠ちょっ，おまw. スコアと称号を教えて";
 const answerPrefix = "あなたのスコアは ";
 const answerMiddle = " 点でした。\n獲得称号は「";
 const answerSuffix = "」です。";
+const typingSound = "/sounds/se/character-forwarding.mp3";
+const titleRevealSound = "/sounds/se/rhythm-heaven-fever-ok-jingle-loud.mp3";
+const titleRevealDelay = 700;
 
 type ConversationProps = {
   onReplay: () => void;
@@ -49,29 +53,52 @@ function XLogo({ className = "size-4" }: { className?: string }) {
 function Conversation({ onReplay, score, achievement }: ConversationProps) {
   const answerScore = score.toLocaleString("ja-JP");
   const titleText = achievement?.title ?? "なし";
+  const hasAchievement = achievement !== null;
   const answer = `${answerPrefix}${answerScore}${answerMiddle}${titleText}${answerSuffix}`;
   const [typedQuestion, setTypedQuestion] = useState("");
   const [typedAnswer, setTypedAnswer] = useState("");
   const [stage, setStage] = useState<
-    "typing-question" | "thinking" | "typing-answer" | "done"
+    "typing-question" | "thinking" | "typing-answer" | "revealing-title" | "done"
   >("typing-question");
 
   useEffect(() => {
     let timer: number;
     let questionIndex = 0;
     let answerIndex = 0;
+    let lastTypingSoundAt = -Infinity;
     const reducedMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
     const typingDelay = reducedMotion ? 0 : 42;
     const pauseDelay = reducedMotion ? 0 : 500;
+    preloadSe(typingSound);
+    preloadSe(titleRevealSound);
+
+    const playTypingSound = (character: string) => {
+      const now = performance.now();
+      if (
+        !reducedMotion &&
+        !/\s/.test(character) &&
+        now - lastTypingSoundAt >= 160
+      ) {
+        playSe(typingSound, 0.18);
+        lastTypingSoundAt = now;
+      }
+    };
 
     const typeAnswer = () => {
       answerIndex += 1;
       setTypedAnswer(answer.slice(0, answerIndex));
+      playTypingSound(answer[answerIndex - 1]);
 
       if (answerIndex < answer.length) {
         timer = window.setTimeout(typeAnswer, typingDelay);
+      } else if (hasAchievement) {
+        setStage("revealing-title");
+        timer = window.setTimeout(() => {
+          playSe(titleRevealSound, 1);
+          setStage("done");
+        }, titleRevealDelay);
       } else {
         setStage("done");
       }
@@ -90,6 +117,7 @@ function Conversation({ onReplay, score, achievement }: ConversationProps) {
     const typeQuestion = () => {
       questionIndex += 1;
       setTypedQuestion(question.slice(0, questionIndex));
+      playTypingSound(question[questionIndex - 1]);
 
       if (questionIndex < question.length) {
         timer = window.setTimeout(typeQuestion, typingDelay);
@@ -101,7 +129,7 @@ function Conversation({ onReplay, score, achievement }: ConversationProps) {
     timer = window.setTimeout(typeQuestion, reducedMotion ? 0 : 400);
 
     return () => window.clearTimeout(timer);
-  }, [answer]);
+  }, [answer, hasAchievement]);
 
   const scoreEnd = answerPrefix.length + answerScore.length;
   const titleStart = scoreEnd + answerMiddle.length;
@@ -167,6 +195,7 @@ function Conversation({ onReplay, score, achievement }: ConversationProps) {
 
         {(stage === "thinking" ||
           stage === "typing-answer" ||
+          stage === "revealing-title" ||
           stage === "done") && (
           <div className="flex items-start gap-3">
             <GrokMark className="size-8" />
@@ -197,16 +226,19 @@ function Conversation({ onReplay, score, achievement }: ConversationProps) {
                     <span className="ml-0.5 inline-block h-5 w-0.5 translate-y-1 animate-pulse bg-white motion-reduce:animate-none" />
                   )}
                 </p>
-                {stage === "done" && achievement && (
-                  <div className="mt-4 rounded-2xl border border-white/15 bg-white/5 px-4 py-3.5" aria-label="獲得した称号">
-                    <span className="text-[11px] font-bold tracking-wider text-white/50 uppercase">獲得称号（実績）</span>
-                    <p className="mt-1 text-lg font-extrabold text-white">「{achievement.title}」</p>
-                    <p className="mt-1 text-xs leading-relaxed text-white/70">{achievement.description}</p>
-                  </div>
-                )}
                 </>
               )}
             </div>
+          </div>
+        )}
+        {stage === "done" && achievement && (
+          <div
+            className="mx-auto w-full max-w-[360px] animate-title-reveal rounded-2xl border border-white/15 bg-white/5 px-4 py-3.5 motion-reduce:animate-none"
+            aria-label="獲得した称号"
+          >
+            <span className="text-[11px] font-bold tracking-wider text-white/50 uppercase">獲得称号（実績）</span>
+            <p className="mt-1 text-lg font-extrabold text-white">「{achievement.title}」</p>
+            <p className="mt-1 text-xs leading-relaxed text-white/70">{achievement.description}</p>
           </div>
         )}
       </section>
